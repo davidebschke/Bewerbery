@@ -51,6 +51,31 @@ Ergebnis in `release/<version>/`:
 - `Bewerbery-<version>-x64.exe` – Installer (NSIS, Installationsordner wählbar)
 - `Bewerbery-<version>-portable.exe` – portable Version ohne Installation
 
+## Linux-Pakete bauen
+
+Ergebnis ebenfalls in `release/<version>/`:
+
+- `Bewerbery-<version>-x86_64.AppImage` – läuft ohne Installation auf fast allen Distributionen
+  (`chmod +x Bewerbery-*.AppImage && ./Bewerbery-*.AppImage`)
+- `Bewerbery-<version>-x64.tar.gz` – entpacken und `./bewerbery` starten
+
+| Wo wird gebaut?                            | Befehl                                     |
+| ------------------------------------------ | ------------------------------------------ |
+| auf Linux                                  | `npm run dist:linux`                       |
+| auf Windows mit Docker Desktop (empfohlen) | `npm run dist:linux:docker`                |
+| auf Windows ohne Docker                    | `npm run dist:linux` (siehe Hinweis unten) |
+| Linux-App testen (Windows + Docker)        | `npm run test:e2e:linux`                   |
+
+Ohne Docker braucht das AppImage unter Windows den **Entwicklermodus** (für symbolische Links);
+ohne ihn entsteht nur das `tar.gz`.
+
+`dist:linux:docker` baut im offiziellen Image `electronuserland/builder` und installiert die
+Abhängigkeiten dort neu, dein lokales `node_modules` bleibt unberührt.
+
+> Hinweis für Ubuntu ab 24.04: AppImages benötigen `libfuse2` (`sudo apt install libfuse2t64`).
+
+## E2E gegen die gepackte App
+
 Die E2E-Tests lassen sich auch gegen die gepackte App ausführen:
 
 ```powershell

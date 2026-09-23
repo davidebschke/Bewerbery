@@ -27,4 +27,20 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: Bewerbery
   uninstallDisplayName: Bewerbery
+linux:
+  icon: build/icon.png
+  category: Office
+  synopsis: Bewerbungen verfolgen – professionell, aber spielerisch
+  maintainer: David Ebschke <DavidEbschke@protonmail.com>
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: tar.gz
+      arch: [x64]
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  desktop:
+    entry:
+      Name: Bewerbery
+      Comment: Bewerbungen verfolgen
+      StartupWMClass: Bewerbery
 npmRebuild: false

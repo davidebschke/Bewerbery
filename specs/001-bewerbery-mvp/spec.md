@@ -125,6 +125,7 @@ Nachfrist (1–12 Wochen), Theme (System/Hell/Dunkel), Benachrichtigungen an/aus
 - **FR-010**: Windows-Benachrichtigung für neu fällige Cards (abschaltbar).
 - **FR-011**: Responsives Layout 1–4 Spalten ab 360 px.
 - **FR-012**: Build einer Windows-exe (NSIS-Installer + portable).
+- **FR-013**: Build ausführbarer Linux-Pakete (AppImage + tar.gz), unter Windows per Docker.
 
 ### Key Entities
 
@@ -140,3 +141,4 @@ Nachfrist (1–12 Wochen), Theme (System/Hell/Dunkel), Benachrichtigungen an/aus
 - **SC-002**: Fällige Cards sind ohne Scrollen sichtbar (gepinnt oben).
 - **SC-003**: ≥ 90 % Testabdeckung, alle Unit-, Komponenten- und E2E-Tests grün.
 - **SC-004**: `npm run dist` erzeugt Installer und portable exe.
+- **SC-005**: `npm run dist:linux` (Linux) bzw. `npm run dist:linux:docker` (Windows) erzeugt AppImage und tar.gz.

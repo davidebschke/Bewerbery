@@ -36,4 +36,5 @@
 
 - [x] T030 Playwright-E2E: Anlegen, Persistenz, Pinning, Einstellungen, Responsiv
 - [x] T031 electron-builder (NSIS + portable), Icon
+- [x] T033 Linux-Build (AppImage + tar.gz), Docker-Skript für Windows, E2E gegen Linux-Build
 - [x] T032 README, Abschlussprüfung (typecheck, lint, test, e2e, dist)

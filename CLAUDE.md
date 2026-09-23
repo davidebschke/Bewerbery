@@ -15,6 +15,8 @@ Aktuelle Spezifikation: [specs/001-bewerbery-mvp/](specs/001-bewerbery-mvp/).
 | E2E-Tests (baut vorher) | `npm run test:e2e` |
 | Alles | `npm run test:all` |
 | Windows-exe (Installer + portable) | `npm run dist` → `release/<version>/` |
+| Linux (AppImage + tar.gz) auf Linux | `npm run dist:linux` |
+| Linux-Pakete unter Windows (Docker) | `npm run dist:linux:docker` (`scripts/dist-linux-docker.mjs`) |
 
 Hinweis: In VS Code ist `ELECTRON_RUN_AS_NODE` gesetzt. Die E2E-Tests entfernen die Variable selbst;
 für `npm run dev` ggf. vorher `Remove-Item Env:ELECTRON_RUN_AS_NODE` ausführen.

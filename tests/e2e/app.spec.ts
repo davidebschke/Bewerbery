@@ -47,9 +47,11 @@ async function launch(seed?: object): Promise<{ app: ElectronApplication; page: 
   delete env.ELECTRON_RUN_AS_NODE
   // BEWERBERY_EXE=<Pfad zur gepackten exe> testet den fertigen Build statt out/main
   const executablePath = process.env.BEWERBERY_EXE
+  // z. B. „--no-sandbox“ für Linux-Container, die als root laufen
+  const extraArgs = process.env.BEWERBERY_ELECTRON_ARGS?.split(' ').filter(Boolean) ?? []
   const app = await electron.launch({
     executablePath,
-    args: executablePath ? [] : [MAIN],
+    args: [...extraArgs, ...(executablePath ? [] : [MAIN])],
     env: env as Record<string, string>,
   })
   const page = await app.firstWindow()

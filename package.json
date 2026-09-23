@@ -2,11 +2,12 @@
   "name": "bewerbery",
   "productName": "Bewerbery",
   "version": "1.0.0",
-  "description": "Bewerbungen verfolgen – professionell, aber spielerisch.",
+  "description": "Bewerbungen verfolgen â€“ professionell, aber spielerisch.",
   "author": "David Ebschke",
   "license": "UNLICENSED",
   "private": true,
   "main": "./out/main/index.js",
+  "desktopName": "bewerbery.desktop",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -19,6 +20,9 @@
     "test:e2e": "electron-vite build && playwright test",
     "test:all": "npm run typecheck && npm run lint && npm test && npm run test:e2e",
     "dist": "electron-vite build && electron-builder --win",
+    "dist:linux": "electron-vite build && electron-builder --linux",
+    "dist:linux:docker": "electron-vite build && node scripts/dist-linux-docker.mjs",
+    "test:e2e:linux": "node scripts/e2e-linux-docker.mjs",
     "prepare": "husky"
   },
   "dependencies": {
