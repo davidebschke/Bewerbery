@@ -1,0 +1,30 @@
+appId: de.ebschke.bewerbery
+productName: Bewerbery
+copyright: Copyright © 2026 David Ebschke
+directories:
+  output: release/${version}
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+asarUnpack:
+  - resources/**
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  artifactName: ${productName}-${version}-${arch}.${ext}
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Bewerbery
+  uninstallDisplayName: Bewerbery
+npmRebuild: false
