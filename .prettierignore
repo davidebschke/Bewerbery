@@ -1,0 +1,9 @@
+out
+dist
+release
+coverage
+node_modules
+.specify
+.claude
+package-lock.json
+specs
