@@ -9,8 +9,10 @@ Desktop-App zur Verwaltung deiner Bewerbungen – professionell, aber spielerisc
 - **Gepinnter Bereich „Jetzt melden“**: fällige Bewerbungen stehen immer ganz oben
 - **Status-Pipeline**: Beworben → Termin (mit Datum) → Angebot / Absage
 - **Gamification**: XP, 7 Level, Abzeichen, Wochen-Serie, Konfetti bei Terminen und Angeboten
-- **Erinnerungen** als Windows-Benachrichtigung (abschaltbar)
-- **100 % lokal**: Daten unter `%APPDATA%/Bewerbery`, keine Cloud, kein Tracking
+- **Erinnerungen** als System-Benachrichtigung (abschaltbar)
+- **100 % lokal**: Daten unter `%APPDATA%/Bewerbery` (Windows) bzw. `~/.config/Bewerbery` (Linux),
+  keine Cloud, kein Tracking
+- Läuft unter **Windows** (Installer + portable exe) und **Linux** (AppImage + tar.gz)
 - Heller und dunkler Modus, responsiv ab 360 px Fensterbreite
 
 ## Tech-Stack
