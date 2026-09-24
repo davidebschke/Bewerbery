@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { IPC } from '@shared/ipc'
-import { makeData } from '@shared/testing/fixtures'
+import { makeApplication, makeData } from '@shared/testing/fixtures'
 import type { ApplicationDocument } from '@shared/types'
 import type { DocumentService } from '../../../../src/main/documents/documentService'
+import type { PdfExportService } from '../../../../src/main/pdf/pdfExportService'
 import type { DataStore } from '../../../../src/main/storage/dataStore'
 import { registerIpc, type IpcDeps } from '../../../../src/main/ipc/registerIpc'
 
@@ -31,18 +32,23 @@ function setup(overrides: Partial<IpcDeps> = {}) {
     remove: vi.fn(async () => undefined),
     removeAll: vi.fn(async () => undefined),
   }
+  const pdfExport: PdfExportService = {
+    exportApplications: vi.fn(async () => ({ canceled: false, filePath: 'C:/export.pdf' })),
+  }
   const deps: IpcDeps = {
     ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
     dataStore,
     documents,
+    pdfExport,
     pickFiles: vi.fn(async () => ['C:/cv.pdf']),
     openPath: vi.fn(async () => ''),
+    now: () => new Date('2026-09-23T00:00:00.000Z'),
     onDataChanged: vi.fn(),
     ...overrides,
   }
   registerIpc(deps)
   const invoke = (channel: string, ...args: unknown[]) => handlers.get(channel)!({}, ...args)
-  return { deps, dataStore, documents, invoke, data, handlers }
+  return { deps, dataStore, documents, pdfExport, invoke, data, handlers }
 }
 
 describe('registerIpc', () => {
@@ -100,5 +106,30 @@ describe('registerIpc', () => {
     await invoke(IPC.removeAllDocuments, 'app')
     expect(documents.remove).toHaveBeenCalledWith('app', doc)
     expect(documents.removeAll).toHaveBeenCalledWith('app')
+  })
+
+  it('exports the selected applications as pdf', async () => {
+    const app1 = makeApplication({ id: 'a1' })
+    const app2 = makeApplication({ id: 'a2' })
+    const exportData = makeData({ applications: [app1, app2] })
+    const today = new Date('2026-09-23T00:00:00.000Z')
+    const { invoke, pdfExport } = setup({
+      dataStore: {
+        filePath: 'x',
+        load: vi.fn(async () => exportData),
+        save: vi.fn(async (d) => d as typeof exportData),
+      },
+      now: () => today,
+    })
+
+    const result = await invoke(IPC.exportApplicationsPdf, ['a1'])
+
+    expect(result).toEqual({ canceled: false, filePath: 'C:/export.pdf' })
+    expect(pdfExport.exportApplications).toHaveBeenCalledWith([app1], exportData.settings, today)
+  })
+
+  it('validates the application ids for the pdf export', async () => {
+    const { invoke } = setup()
+    await expect(invoke(IPC.exportApplicationsPdf, 'not-an-array')).rejects.toThrow()
   })
 })
