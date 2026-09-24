@@ -1,0 +1,144 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Neue Versionsnummer (SemVer, z. B. 1.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Version setzen & Release anlegen
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Versionsnummer validieren
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Ungültige Versionsnummer: '$VERSION' (erwartet SemVer, z. B. 1.2.0)"
+            exit 1
+          fi
+
+          if git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null; then
+            echo "::error::Version v${VERSION} existiert bereits als Git-Tag."
+            exit 1
+          fi
+
+          current_version=$(grep -m1 '"version"' package.json | sed -E 's/.*"version": *"([^"]+)".*/\1/')
+          if [ "$current_version" = "$VERSION" ]; then
+            echo "::error::Version ${VERSION} entspricht bereits der aktuellen package.json-Version. Bitte eine neue Versionsnummer wählen."
+            exit 1
+          fi
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: package.json auf neue Version setzen
+        run: npm pkg set version=${{ inputs.version }}
+
+      - name: Version committen und taggen
+        id: tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore(release): v${VERSION}"
+          git tag "v${VERSION}"
+          git push origin HEAD:"${GITHUB_REF_NAME}"
+          git push origin "v${VERSION}"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: GitHub-Release anlegen (Entwurf)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.tag.outputs.tag }}" \
+            --title "Bewerbery ${{ steps.tag.outputs.tag }}" \
+            --generate-notes \
+            --draft
+
+  build-windows:
+    name: Windows-exe bauen (Installer + portable)
+    needs: prepare
+    runs-on: windows-latest
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Windows-Pakete bauen
+        run: npm run dist
+
+      - name: Installer-exe hochladen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.prepare.outputs.tag }}" "release/${{ inputs.version }}/Bewerbery-${{ inputs.version }}-x64.exe" --clobber
+
+      - name: Portable-exe hochladen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.prepare.outputs.tag }}" "release/${{ inputs.version }}/Bewerbery-${{ inputs.version }}-portable.exe" --clobber
+
+  build-linux:
+    name: Linux-AppImage bauen
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: AppImage bauen
+        run: npm run dist:linux
+
+      - name: AppImage hochladen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.prepare.outputs.tag }}" "release/${{ inputs.version }}/Bewerbery-${{ inputs.version }}-x86_64.AppImage" --clobber
+
+  publish:
+    name: Release veröffentlichen
+    needs: [prepare, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Entwurf veröffentlichen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ needs.prepare.outputs.tag }}" --draft=false --repo "${{ github.repository }}"
