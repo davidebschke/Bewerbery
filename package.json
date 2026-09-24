@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Bewerbungen verfolgen â€“ professionell, aber spielerisch.",
   "author": "David Ebschke",
-  "license": "UNLICENSED",
+  "license": "GPL-3.0-or-later",
   "private": true,
   "main": "./out/main/index.js",
   "desktopName": "bewerbery.desktop",

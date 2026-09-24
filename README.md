@@ -13,6 +13,7 @@ Desktop app for managing your job applications – professional, yet playful.
   - [Ausführbare Dateien bauen](#build-de)
   - [Tests ausführen](#tests-de)
   - [Spec-Driven Development](#spec-driven-de)
+  - [Lizenz](#lizenz-de)
 - [🇬🇧 English](#english)
   - [Description](#description)
   - [Tech Stack](#tech-stack-en)
@@ -21,6 +22,7 @@ Desktop app for managing your job applications – professional, yet playful.
   - [Building Executables](#build-en)
   - [Running the Tests](#tests-en)
   - [Spec-Driven Development](#spec-driven-en)
+  - [License](#license-en)
 
 ---
 
@@ -163,6 +165,14 @@ Das Projekt nutzt [GitHub Spec-Kit](https://github.com/github/spec-kit). In Clau
 Skills `/speckit-specify`, `/speckit-plan`, `/speckit-tasks` und `/speckit-implement` für neue
 Features bereit.
 
+<a id="lizenz-de"></a>
+
+### Lizenz
+
+Dieses Projekt steht unter der [GNU General Public License v3.0](LICENSE) (GPL-3.0-or-later).
+Abgeleitete Werke, auch als kompilierte Installer/Binaries, müssen ebenfalls unter GPL-3.0
+veröffentlicht werden.
+
 ---
 
 <a id="english"></a>
@@ -302,3 +312,10 @@ $env:BEWERBERY_EXE = "$PWD\release\1.0.0\win-unpacked\Bewerbery.exe"; npx playwr
 The project uses [GitHub Spec-Kit](https://github.com/github/spec-kit). In Claude Code, the skills
 `/speckit-specify`, `/speckit-plan`, `/speckit-tasks` and `/speckit-implement` are available for new
 features.
+
+<a id="license-en"></a>
+
+### License
+
+This project is licensed under the [GNU General Public License v3.0](LICENSE) (GPL-3.0-or-later).
+Derivative works, including compiled installers/binaries, must also be released under GPL-3.0.
