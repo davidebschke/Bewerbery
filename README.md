@@ -12,6 +12,7 @@ Desktop app for managing your job applications – professional, yet playful.
   - [Projekt in VS Code auschecken und starten](#vscode-start-de)
   - [Ausführbare Dateien bauen](#build-de)
   - [Tests ausführen](#tests-de)
+  - [CI/CD](#cicd-de)
   - [Spec-Driven Development](#spec-driven-de)
   - [Lizenz](#lizenz-de)
 - [🇬🇧 English](#english)
@@ -21,6 +22,7 @@ Desktop app for managing your job applications – professional, yet playful.
   - [Checking Out and Starting the Project in VS Code](#vscode-start-en)
   - [Building Executables](#build-en)
   - [Running the Tests](#tests-en)
+  - [CI/CD](#cicd-en)
   - [Spec-Driven Development](#spec-driven-en)
   - [License](#license-en)
 
@@ -156,6 +158,19 @@ Die E2E-Tests lassen sich auch gegen die gepackte App ausführen:
 ```powershell
 $env:BEWERBERY_EXE = "$PWD\release\1.0.0\win-unpacked\Bewerbery.exe"; npx playwright test
 ```
+
+<a id="cicd-de"></a>
+
+### CI/CD
+
+Zwei GitHub-Actions-Workflows unter [.github/workflows/](.github/workflows/):
+
+- **`ci.yml`** – läuft automatisch bei jedem Öffnen oder Aktualisieren eines Pull Requests:
+  Typecheck, Lint, Unit-/Komponententests (Coverage-Gate ≥ 90 %) und E2E-Tests.
+- **`release.yml`** – manuell auslösbar über den *Actions*-Tab (`workflow_dispatch`). Fragt nach
+  einer neuen SemVer-Versionsnummer, setzt sie in `package.json`, erstellt Git-Tag und
+  GitHub-Release und baut anschließend drei Artefakte, die am Release angehängt werden:
+  Windows-Installer-exe, Windows-portable-exe und Linux-AppImage.
 
 <a id="spec-driven-de"></a>
 
@@ -304,6 +319,19 @@ The E2E tests can also be run against the packaged app:
 ```powershell
 $env:BEWERBERY_EXE = "$PWD\release\1.0.0\win-unpacked\Bewerbery.exe"; npx playwright test
 ```
+
+<a id="cicd-en"></a>
+
+### CI/CD
+
+Two GitHub Actions workflows under [.github/workflows/](.github/workflows/):
+
+- **`ci.yml`** – runs automatically whenever a pull request is opened or updated: typecheck, lint,
+  unit/component tests (coverage gate ≥ 90 %) and E2E tests.
+- **`release.yml`** – manually triggered from the *Actions* tab (`workflow_dispatch`). Asks for a
+  new SemVer version number, sets it in `package.json`, creates a Git tag and GitHub release, then
+  builds three artifacts attached to that release: the Windows installer exe, the Windows portable
+  exe and the Linux AppImage.
 
 <a id="spec-driven-en"></a>
 
