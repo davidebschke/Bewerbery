@@ -7,6 +7,9 @@ export interface ApplicationGridProps {
   today: Date
   pinned?: boolean
   onEdit(application: Application): void
+  selectionMode?: boolean
+  selectedIds?: Set<string>
+  onToggleSelect?(id: string): void
 }
 
 /** Responsives Raster: 1 Spalte (schmal) bis 4 Spalten (breit) */
@@ -16,6 +19,9 @@ export function ApplicationGrid({
   today,
   pinned,
   onEdit,
+  selectionMode,
+  selectedIds,
+  onToggleSelect,
 }: ApplicationGridProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
@@ -27,6 +33,9 @@ export function ApplicationGrid({
           today={today}
           pinned={pinned}
           onEdit={onEdit}
+          selectionMode={selectionMode}
+          selected={selectedIds?.has(application.id) ?? false}
+          onToggleSelect={() => onToggleSelect?.(application.id)}
         />
       ))}
     </div>

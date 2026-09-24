@@ -112,4 +112,82 @@ describe('App', () => {
     act(() => useAppStore.getState().setStage(id, 'offer'))
     expect(vi.mocked(confetti)).toHaveBeenCalled()
   })
+
+  it('exports selected applications as pdf', async () => {
+    renderWith(
+      makeData({
+        applications: [
+          makeApplication({ company: 'Erste GmbH' }),
+          makeApplication({ company: 'Zweite GmbH' }),
+        ],
+      }),
+    )
+    await screen.findByRole('article', { name: 'Bewerbung bei Erste GmbH' })
+    const ids = useAppStore.getState().data.applications.map((application) => application.id)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Als PDF exportieren' }))
+    expect(screen.queryByRole('button', { name: 'Als PDF exportieren' })).not.toBeInTheDocument()
+
+    const firstCheckbox = screen.getByRole('checkbox', { name: 'Erste GmbH auswählen' })
+    await userEvent.click(firstCheckbox)
+    expect(screen.getByText('(1 von 2 ausgewählt)')).toBeInTheDocument()
+
+    // Erneutes Klicken hebt die Auswahl der Karte wieder auf
+    await userEvent.click(firstCheckbox)
+    expect(screen.getByText('(0 von 2 ausgewählt)')).toBeInTheDocument()
+    await userEvent.click(firstCheckbox)
+
+    await userEvent.click(screen.getByRole('button', { name: 'PDF erstellen' }))
+    expect(api.exportApplicationsPdf).toHaveBeenCalledWith([ids[0]])
+    expect(await screen.findByText('PDF wurde erstellt.')).toBeInTheDocument()
+    // Auswahlmodus wird nach erfolgreichem Export beendet
+    expect(await screen.findByRole('button', { name: 'Als PDF exportieren' })).toBeInTheDocument()
+  })
+
+  it('selects all visible applications and cancels the selection', async () => {
+    renderWith(
+      makeData({
+        applications: [
+          makeApplication({ company: 'Alpha AG' }),
+          makeApplication({ company: 'Beta AG' }),
+        ],
+      }),
+    )
+    await screen.findByRole('article', { name: 'Bewerbung bei Alpha AG' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Als PDF exportieren' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: /Alle auswählen/ }))
+    expect(screen.getByText('(2 von 2 ausgewählt)')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Abbrechen' }))
+    expect(screen.getByRole('button', { name: 'Als PDF exportieren' })).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  })
+
+  it('keeps the selection open and shows no toast when the save dialog is cancelled', async () => {
+    renderWith(makeData({ applications: [makeApplication({ company: 'Abbruch AG' })] }))
+    await screen.findByRole('article', { name: 'Bewerbung bei Abbruch AG' })
+    api.exportApplicationsPdf.mockResolvedValueOnce({ canceled: true })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Als PDF exportieren' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: /Alle auswählen/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'PDF erstellen' }))
+
+    await screen.findByRole('button', { name: 'PDF erstellen' })
+    expect(screen.queryByText('PDF wurde erstellt.')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Abbrechen' })).toBeInTheDocument()
+  })
+
+  it('shows an error toast and keeps the selection when the export fails', async () => {
+    renderWith(makeData({ applications: [makeApplication({ company: 'Fehler AG' })] }))
+    await screen.findByRole('article', { name: 'Bewerbung bei Fehler AG' })
+    api.exportApplicationsPdf.mockRejectedValueOnce(new Error('kaputt'))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Als PDF exportieren' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: /Alle auswählen/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'PDF erstellen' }))
+
+    expect(await screen.findByText('PDF konnte nicht erstellt werden.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Abbrechen' })).toBeInTheDocument()
+  })
 })

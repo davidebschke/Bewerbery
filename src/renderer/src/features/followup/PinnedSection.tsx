@@ -7,10 +7,21 @@ export interface PinnedSectionProps {
   settings: Settings
   today: Date
   onEdit(application: Application): void
+  selectionMode?: boolean
+  selectedIds?: Set<string>
+  onToggleSelect?(id: string): void
 }
 
 /** Gepinnter Bereich am Anfang der Liste für alle Bewerbungen, bei denen man sich melden sollte */
-export function PinnedSection({ applications, settings, today, onEdit }: PinnedSectionProps) {
+export function PinnedSection({
+  applications,
+  settings,
+  today,
+  onEdit,
+  selectionMode,
+  selectedIds,
+  onToggleSelect,
+}: PinnedSectionProps) {
   if (applications.length === 0) return null
   return (
     <section
@@ -37,6 +48,9 @@ export function PinnedSection({ applications, settings, today, onEdit }: PinnedS
         today={today}
         pinned
         onEdit={onEdit}
+        selectionMode={selectionMode}
+        selectedIds={selectedIds}
+        onToggleSelect={onToggleSelect}
       />
     </section>
   )
