@@ -165,7 +165,7 @@ $env:BEWERBERY_EXE = "$PWD\release\1.0.0\win-unpacked\Bewerbery.exe"; npx playwr
 
 Zwei GitHub-Actions-Workflows unter [.github/workflows/](.github/workflows/):
 
-- **`ci.yml`** – läuft automatisch bei jedem Öffnen oder Aktualisieren eines Pull Requests:
+- **`tests.yml`** – läuft automatisch bei jedem Öffnen oder Aktualisieren eines Pull Requests:
   Typecheck, Lint, Unit-/Komponententests (Coverage-Gate ≥ 90 %) und E2E-Tests.
 - **`release.yml`** – manuell auslösbar über den *Actions*-Tab (`workflow_dispatch`). Fragt nach
   einer neuen SemVer-Versionsnummer, setzt sie in `package.json`, erstellt Git-Tag und
@@ -326,7 +326,7 @@ $env:BEWERBERY_EXE = "$PWD\release\1.0.0\win-unpacked\Bewerbery.exe"; npx playwr
 
 Two GitHub Actions workflows under [.github/workflows/](.github/workflows/):
 
-- **`ci.yml`** – runs automatically whenever a pull request is opened or updated: typecheck, lint,
+- **`tests.yml`** – runs automatically whenever a pull request is opened or updated: typecheck, lint,
   unit/component tests (coverage gate ≥ 90 %) and E2E tests.
 - **`release.yml`** – manually triggered from the *Actions* tab (`workflow_dispatch`). Asks for a
   new SemVer version number, sets it in `package.json`, creates a Git tag and GitHub release, then

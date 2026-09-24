@@ -1,11 +1,11 @@
-name: CI
+name: Tests
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: tests-${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
