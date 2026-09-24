@@ -1,6 +1,7 @@
 appId: de.ebschke.bewerbery
 productName: Bewerbery
 copyright: Copyright © 2026 David Ebschke
+publish: never
 directories:
   output: release/${version}
   buildResources: build
