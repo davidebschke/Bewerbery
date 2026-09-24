@@ -3,11 +3,15 @@ paths:
   - "src/**/*.ts"
   - "src/**/*.tsx"
   - "tests/**/*.ts"
+  - "tests/unit/**/*.ts"
+  - "tests/unit/**/*.tsx"
 ---
 
 # Test-Regeln
 
-- Jede neue Datei in `src/` bekommt eine Test-Datei daneben (`*.test.ts` / `*.test.tsx`).
+- Jede neue Datei in `src/` bekommt eine gespiegelte Test-Datei unter `tests/unit/` (`*.test.ts` /
+  `*.test.tsx`), z. B. `src/shared/domain/dates.ts` → `tests/unit/shared/domain/dates.test.ts`.
+  Test-Support-Infrastruktur (Setup, Mocks, Utilities) bleibt bei `src/renderer/src/test/`.
 - Coverage-Gate: 90 % für Lines, Branches, Functions, Statements (`vitest.config.ts`). Nie senken.
 - Domain-Logik: deterministische Tests mit festem Datum (`new Date(2026, 8, 23)`), keine echten Uhrzeiten.
 - Main-Services: gegen echte temporäre Verzeichnisse (`mkdtemp`) testen, Electron-APIs injizieren/mocken.
