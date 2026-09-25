@@ -41,6 +41,9 @@ export interface ApplicationCardProps {
   today: Date
   pinned?: boolean
   onEdit(application: Application): void
+  selectionMode?: boolean
+  selected?: boolean
+  onToggleSelect?(): void
 }
 
 export function ApplicationCard({
@@ -49,6 +52,9 @@ export function ApplicationCard({
   today,
   pinned,
   onEdit,
+  selectionMode,
+  selected,
+  onToggleSelect,
 }: ApplicationCardProps) {
   const markFollowedUp = useAppStore((s) => s.markFollowedUp)
   const deleteApplication = useAppStore((s) => s.deleteApplication)
@@ -67,15 +73,27 @@ export function ApplicationCard({
       className={cn(
         'group flex flex-col gap-4 rounded-2xl border bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md',
         pinned ? 'border-due/50 ring-2 ring-due/20' : 'border-line',
+        selected && 'ring-2 ring-brand/50',
         application.stage === 'rejected' && 'opacity-75',
       )}
     >
       <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate font-display text-base font-semibold" title={company}>
-            {company}
-          </h3>
-          {position && <p className="truncate text-sm text-muted">{position}</p>}
+        <div className="flex min-w-0 items-start gap-2">
+          {selectionMode && (
+            <input
+              type="checkbox"
+              checked={selected ?? false}
+              onChange={onToggleSelect}
+              aria-label={`${company} auswählen`}
+              className="mt-1 h-4 w-4 shrink-0 rounded border-line accent-brand"
+            />
+          )}
+          <div className="min-w-0">
+            <h3 className="truncate font-display text-base font-semibold" title={company}>
+              {company}
+            </h3>
+            {position && <p className="truncate text-sm text-muted">{position}</p>}
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {pinned && (

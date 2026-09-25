@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -156,4 +156,39 @@ test('is responsive down to 360px without horizontal scrolling', async () => {
   expect(box?.width).toBeGreaterThanOrEqual(viewport - 1)
   await page.screenshot({ path: join(SCREENSHOTS, 'form-360.png') })
   await app.close()
+})
+
+test('exports selected applications as a pdf summary', async () => {
+  const exportDir = await mkdtemp(join(tmpdir(), 'bewerbery-export-'))
+  const exportPath = join(exportDir, 'export.pdf')
+
+  const { app, page } = await launch({
+    version: 1,
+    applications: [
+      application('a1', 'Muster GmbH', 5),
+      application('a2', 'Beispiel AG', 10),
+    ],
+    settings: { followUpWeeks: 2, notificationsEnabled: false, theme: 'light' },
+  })
+
+  // Nativer Speichern-Dialog wird für den Test durch einen festen Pfad ersetzt
+  await app.evaluate(({ dialog }, savePath) => {
+    dialog.showSaveDialog = (async () => ({
+      canceled: false,
+      filePath: savePath,
+    })) as typeof dialog.showSaveDialog
+  }, exportPath)
+
+  await page.getByRole('button', { name: 'Als PDF exportieren' }).click()
+  await page.getByRole('checkbox', { name: 'Muster GmbH auswählen' }).click()
+  await page.getByRole('button', { name: 'PDF erstellen' }).click()
+  await expect(page.getByText('PDF wurde erstellt.')).toBeVisible()
+  // Auswahlmodus wird nach erfolgreichem Export automatisch beendet
+  await expect(page.getByRole('button', { name: 'Als PDF exportieren' })).toBeVisible()
+
+  const bytes = await readFile(exportPath)
+  expect(bytes.subarray(0, 5).toString('utf8')).toBe('%PDF-')
+
+  await app.close()
+  await rm(exportDir, { recursive: true, force: true })
 })

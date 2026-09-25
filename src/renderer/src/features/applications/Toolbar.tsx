@@ -1,5 +1,6 @@
-import { Search } from 'lucide-react'
+import { FileDown, Search } from 'lucide-react'
 import type { StageFilter } from '@shared/domain/sorting'
+import { Button } from '../../components/ui/Button'
 import { cn } from '../../lib/cn'
 import { FILTERS } from './filters'
 
@@ -8,26 +9,43 @@ export interface ToolbarProps {
   onSearch(value: string): void
   filter: StageFilter
   onFilter(value: StageFilter): void
+  selectionMode: boolean
+  onStartExport(): void
 }
 
-export function Toolbar({ search, onSearch, filter, onFilter }: ToolbarProps) {
+export function Toolbar({
+  search,
+  onSearch,
+  filter,
+  onFilter,
+  selectionMode,
+  onStartExport,
+}: ToolbarProps) {
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-      <label className="relative block w-full md:max-w-xs">
-        <span className="sr-only">Bewerbungen durchsuchen</span>
-        <Search
-          size={16}
-          aria-hidden="true"
-          className="absolute top-1/2 left-3 -translate-y-1/2 text-muted"
-        />
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => onSearch(event.target.value)}
-          placeholder="Unternehmen, Position, Kontakt …"
-          className="h-10 w-full rounded-xl border border-line bg-surface pr-3 pl-9 text-sm focus:border-brand focus:outline-none"
-        />
-      </label>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label className="relative block w-full sm:max-w-xs">
+          <span className="sr-only">Bewerbungen durchsuchen</span>
+          <Search
+            size={16}
+            aria-hidden="true"
+            className="absolute top-1/2 left-3 -translate-y-1/2 text-muted"
+          />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => onSearch(event.target.value)}
+            placeholder="Unternehmen, Position, Kontakt …"
+            className="h-10 w-full rounded-xl border border-line bg-surface pr-3 pl-9 text-sm focus:border-brand focus:outline-none"
+          />
+        </label>
+        {!selectionMode && (
+          <Button variant="secondary" size="sm" onClick={onStartExport}>
+            <FileDown size={14} aria-hidden="true" />
+            Als PDF exportieren
+          </Button>
+        )}
+      </div>
       <div
         role="group"
         aria-label="Nach Status filtern"

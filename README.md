@@ -40,9 +40,11 @@ Bewerbery ist eine lokale Desktop-Anwendung (Windows & Linux), mit der du deine 
 Karten verwaltest: Unternehmen, Position, Ansprechpartner, Absendedatum, eingereichte Dokumente und
 Notizen. Ein Fortschrittsbalken zeigt an, wann eine Nachfrage fällig ist, fällige Bewerbungen werden
 im Bereich „Jetzt melden" angepinnt, und der Bewerbungsstatus durchläuft eine Pipeline von
-„Beworben" über „Termin" bis „Angebot / Absage". Ein dezentes Gamification-System (XP, Level,
-Abzeichen, Wochen-Serie, Konfetti) motiviert am Ball zu bleiben, und optionale
-System-Benachrichtigungen erinnern rechtzeitig ans Nachhaken.
+„Beworben" über „Termin" bis „Angebot / Absage". Über den Button „Als PDF exportieren" lassen sich
+ausgewählte Bewerbungen (einzeln oder per „Alle auswählen") als druckbare Zusammenfassung
+(Kontakt, Status, Fristen, Dokumentnamen – ohne Dateiinhalte) an einen frei wählbaren Ort speichern.
+Ein dezentes Gamification-System (XP, Level, Abzeichen, Wochen-Serie, Konfetti) motiviert am Ball zu
+bleiben, und optionale System-Benachrichtigungen erinnern rechtzeitig ans Nachhaken.
 
 Alle Daten bleiben **zu 100 % lokal** auf dem Rechner (`%APPDATA%/Bewerbery` unter Windows bzw.
 `~/.config/Bewerbery` unter Linux) – keine Cloud, kein Tracking. Die App unterstützt hellen und
@@ -64,6 +66,7 @@ dunklen Modus und ist responsiv ab 360 px Fensterbreite.
 | Zod 4                             | Laufzeit-Validierung (Schemas, IPC-Payloads)                 |
 | date-fns 4                        | Datumsberechnungen (Fristen, Follow-ups)                     |
 | Motion                            | Animationen (Konfetti, dezente Übergänge)                    |
+| pdf-lib                           | PDF-Erzeugung für den Bewerbungs-Export (reines JS, keine nativen Module) |
 | Vitest 5 + Testing Library        | Unit- & Komponententests mit Coverage-Gate                   |
 | Playwright (Electron)             | End-to-End-Tests gegen die laufende App                      |
 | electron-builder 26               | Paketierung als Installer/portable/AppImage/tar.gz           |
@@ -201,9 +204,11 @@ veröffentlicht werden.
 Bewerbery is a local desktop application (Windows & Linux) for managing job applications as cards:
 company, position, contact person, submission date, submitted documents and notes. A progress bar
 shows when a follow-up is due, due applications are pinned in the "Follow up now" section, and the
-application status moves through a pipeline from "Applied" to "Interview" to "Offer / Rejection". A
-subtle gamification system (XP, levels, badges, weekly streak, confetti) keeps you motivated, and
-optional system notifications remind you to follow up in time.
+application status moves through a pipeline from "Applied" to "Interview" to "Offer / Rejection".
+The "Export as PDF" button lets you select applications (individually or via "Select all") and save
+a printable summary (contact info, status, deadlines, document names – no file contents) to a
+location of your choice. A subtle gamification system (XP, levels, badges, weekly streak, confetti)
+keeps you motivated, and optional system notifications remind you to follow up in time.
 
 All data stays **100 % local** on the machine (`%APPDATA%/Bewerbery` on Windows, or
 `~/.config/Bewerbery` on Linux) – no cloud, no tracking. The app supports light and dark mode and is
@@ -225,6 +230,7 @@ responsive down to a 360 px window width.
 | Zod 4                              | Runtime validation (schemas, IPC payloads)                      |
 | date-fns 4                         | Date calculations (deadlines, follow-ups)                       |
 | Motion                             | Animations (confetti, subtle transitions)                       |
+| pdf-lib                            | PDF generation for the application export (pure JS, no native modules) |
 | Vitest 5 + Testing Library         | Unit & component tests with coverage gate                       |
 | Playwright (Electron)              | End-to-end tests against the running app                        |
 | electron-builder 26                | Packaging as installer/portable/AppImage/tar.gz                 |

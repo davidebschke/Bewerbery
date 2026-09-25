@@ -7,6 +7,7 @@ import { EmptyState } from './components/ui/EmptyState'
 import { Toaster } from './components/ui/Toaster'
 import { ApplicationForm } from './features/applications/ApplicationForm'
 import { ApplicationGrid } from './features/applications/ApplicationGrid'
+import { ExportSelectionBar } from './features/applications/ExportSelectionBar'
 import { Toolbar } from './features/applications/Toolbar'
 import { PinnedSection } from './features/followup/PinnedSection'
 import { BadgesDialog } from './features/gamification/BadgesDialog'
@@ -16,18 +17,22 @@ import { XpBar } from './features/gamification/XpBar'
 import { SettingsDialog } from './features/settings/SettingsDialog'
 import { useTheme } from './hooks/useTheme'
 import { useToday } from './hooks/useToday'
+import { getApi } from './lib/api'
 import { useAppStore } from './stores/appStore'
 
 type FormTarget = { mode: 'create' } | { mode: 'edit'; application: Application } | null
 
 export function App() {
-  const { status, error, data, celebration, hydrate } = useAppStore()
+  const { status, error, data, celebration, hydrate, pushToast } = useAppStore()
   const today = useToday()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<StageFilter>('all')
   const [form, setForm] = useState<FormTarget>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [badgesOpen, setBadgesOpen] = useState(false)
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [exporting, setExporting] = useState(false)
 
   useTheme(data.settings.theme)
 
@@ -68,6 +73,47 @@ export function App() {
   const onEdit = (application: Application) => setForm({ mode: 'edit', application })
   const hasApplications = data.applications.length > 0
   const hasResults = pinned.length + others.length > 0
+  const visibleIds = [...pinned, ...others].map((application) => application.id)
+
+  function startExportSelection() {
+    setSelectionMode(true)
+    setSelectedIds(new Set())
+  }
+
+  function cancelExportSelection() {
+    setSelectionMode(false)
+    setSelectedIds(new Set())
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((previous) =>
+      previous.size === visibleIds.length ? new Set() : new Set(visibleIds),
+    )
+  }
+
+  async function exportSelection() {
+    setExporting(true)
+    try {
+      const result = await getApi().exportApplicationsPdf([...selectedIds])
+      if (!result.canceled) {
+        pushToast('info', 'PDF wurde erstellt.')
+        cancelExportSelection()
+      }
+    } catch {
+      pushToast('error', 'PDF konnte nicht erstellt werden.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="app-backdrop min-h-full">
@@ -118,12 +164,32 @@ export function App() {
           </EmptyState>
         ) : (
           <>
-            <Toolbar search={search} onSearch={setSearch} filter={filter} onFilter={setFilter} />
+            <Toolbar
+              search={search}
+              onSearch={setSearch}
+              filter={filter}
+              onFilter={setFilter}
+              selectionMode={selectionMode}
+              onStartExport={startExportSelection}
+            />
+            {selectionMode && (
+              <ExportSelectionBar
+                selectedCount={selectedIds.size}
+                totalCount={visibleIds.length}
+                exporting={exporting}
+                onToggleSelectAll={toggleSelectAll}
+                onExport={() => void exportSelection()}
+                onCancel={cancelExportSelection}
+              />
+            )}
             <PinnedSection
               applications={pinned}
               settings={data.settings}
               today={today}
               onEdit={onEdit}
+              selectionMode={selectionMode}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelected}
             />
             {others.length > 0 && (
               <section aria-labelledby="all-heading" className="flex flex-col gap-3">
@@ -135,6 +201,9 @@ export function App() {
                   settings={data.settings}
                   today={today}
                   onEdit={onEdit}
+                  selectionMode={selectionMode}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelected}
                 />
               </section>
             )}

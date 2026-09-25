@@ -13,7 +13,13 @@ let today: Date
 
 function renderCard(
   application: Application,
-  props: { pinned?: boolean; onEdit?: () => void } = {},
+  props: {
+    pinned?: boolean
+    onEdit?: () => void
+    selectionMode?: boolean
+    selected?: boolean
+    onToggleSelect?: () => void
+  } = {},
 ) {
   seedStore({ applications: [application] })
   const onEdit = props.onEdit ?? vi.fn()
@@ -24,6 +30,9 @@ function renderCard(
       today={today}
       pinned={props.pinned}
       onEdit={onEdit}
+      selectionMode={props.selectionMode}
+      selected={props.selected}
+      onToggleSelect={props.onToggleSelect}
     />,
   )
   return {
@@ -126,5 +135,39 @@ describe('ApplicationCard', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Bleibt löschen' }))
     await userEvent.click(screen.getByRole('button', { name: 'Schließen' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('hides the selection checkbox outside of selection mode', () => {
+    renderCard(makeApplication({ company: 'Frei' }))
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  })
+
+  it('defaults the checkbox to unchecked when no selection state is passed', () => {
+    const { card } = renderCard(makeApplication({ company: 'Ohne Status' }), {
+      selectionMode: true,
+    })
+    expect(within(card).getByRole('checkbox')).not.toBeChecked()
+  })
+
+  it('shows a selection checkbox in selection mode and reports toggles', async () => {
+    const onToggleSelect = vi.fn()
+    const { card } = renderCard(makeApplication({ company: 'Wähl AG' }), {
+      selectionMode: true,
+      selected: false,
+      onToggleSelect,
+    })
+    const checkbox = within(card).getByRole('checkbox', { name: 'Wähl AG auswählen' })
+    expect(checkbox).not.toBeChecked()
+    await userEvent.click(checkbox)
+    expect(onToggleSelect).toHaveBeenCalled()
+  })
+
+  it('shows the selected checkbox as checked and highlights the card', () => {
+    const { card } = renderCard(makeApplication({ company: 'Markiert' }), {
+      selectionMode: true,
+      selected: true,
+    })
+    expect(within(card).getByRole('checkbox', { name: 'Markiert auswählen' })).toBeChecked()
+    expect(card.className).toContain('ring-brand/50')
   })
 })

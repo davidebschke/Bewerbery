@@ -31,6 +31,7 @@ describe('preload api', () => {
     await api.openDocument('a', doc)
     await api.removeDocument('a', doc)
     await api.removeAllDocuments('a')
+    await api.exportApplicationsPdf(['a'])
 
     expect(invoke.mock.calls).toEqual([
       [IPC.loadData],
@@ -40,6 +41,7 @@ describe('preload api', () => {
       [IPC.openDocument, 'a', doc],
       [IPC.removeDocument, 'a', doc],
       [IPC.removeAllDocuments, 'a'],
+      [IPC.exportApplicationsPdf, ['a']],
     ])
     expect(api.getPathForFile({} as File)).toBe('C:/file.pdf')
   })

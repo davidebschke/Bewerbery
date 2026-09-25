@@ -5,6 +5,7 @@ import type { AppData } from '@shared/types'
 import { createDocumentService } from './documents/documentService'
 import { registerIpc } from './ipc/registerIpc'
 import { createReminderService } from './notifications/reminderService'
+import { createPdfExportService } from './pdf/pdfExportService'
 import { createDataStore } from './storage/dataStore'
 import { createWindowOptions, decideNavigation, isExternalUrl } from './window'
 
@@ -50,6 +51,14 @@ app.whenReady().then(() => {
     ipcMain,
     dataStore: createDataStore(userData),
     documents: createDocumentService(join(userData, DOCUMENTS_DIR_NAME)),
+    pdfExport: createPdfExportService(async (suggestedName) => {
+      const result = await dialog.showSaveDialog({
+        title: 'PDF speichern',
+        defaultPath: suggestedName,
+        filters: [{ name: 'PDF-Dateien', extensions: ['pdf'] }],
+      })
+      return result.canceled || !result.filePath ? null : result.filePath
+    }),
     pickFiles: async () => {
       const result = await dialog.showOpenDialog({
         title: 'Dokumente hinzufügen',
@@ -58,6 +67,7 @@ app.whenReady().then(() => {
       return result.canceled ? [] : result.filePaths
     },
     openPath: (path) => shell.openPath(path),
+    now: () => new Date(),
     onDataChanged: (data) => {
       latestData = data
       reminders.check(data)

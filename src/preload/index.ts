@@ -12,6 +12,8 @@ export const api: BewerberyApi = {
   removeDocument: (applicationId, document) =>
     ipcRenderer.invoke(IPC.removeDocument, applicationId, document),
   removeAllDocuments: (applicationId) => ipcRenderer.invoke(IPC.removeAllDocuments, applicationId),
+  exportApplicationsPdf: (applicationIds) =>
+    ipcRenderer.invoke(IPC.exportApplicationsPdf, applicationIds),
   getPathForFile: (file) => webUtils.getPathForFile(file),
 }
 
