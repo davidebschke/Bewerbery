@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileUp, Plus, Settings as SettingsIcon, Target } from 'lucide-react'
+import { FileUp, Plus, Settings as SettingsIcon } from 'lucide-react'
 import { arrangeApplications, type StageFilter } from '@shared/domain/sorting'
 import type { Application } from '@shared/types'
+import appIcon from './assets/icon.png'
 import { Button } from './components/ui/Button'
 import { EmptyState } from './components/ui/EmptyState'
 import { Toaster } from './components/ui/Toaster'
@@ -122,9 +123,13 @@ export function App() {
       <header className="sticky top-0 z-30 border-b border-line bg-bg/80 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-linear-to-br from-brand to-brand-2 text-white shadow-md shadow-brand/30">
-              <Target size={20} aria-hidden="true" />
-            </span>
+            <img
+              src={appIcon}
+              alt=""
+              width={36}
+              height={36}
+              className="h-9 w-9 rounded-xl shadow-md shadow-brand/30"
+            />
             <div className="leading-tight">
               <h1 className="font-display text-lg font-bold">Bewerbery</h1>
               <p className="hidden text-xs text-muted sm:block">Deine Bewerbungen im Griff</p>
