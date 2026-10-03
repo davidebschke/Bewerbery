@@ -102,7 +102,8 @@ src/
 │                import/ (CSV/ODS/XLSX lesen, Vorlagen schreiben), ipc/
 ├── preload/     typisierte window.api-Bridge
 └── renderer/    React-UI: features/ (applications, followup, gamification, import, settings),
-                 components/ui/, stores/, hooks/, lib/
+                 components/ui/, stores/, hooks/, lib/, assets/ (icon.png)
+build/           Build-Ressourcen (icon.png = App-Icon der exe)
 tests/
 ├── unit/        Unit- & Komponententests (spiegelt die Struktur von src/)
 ├── fixtures/    Testdateien, z. B. import/ für alle Import-Problemfälle (siehe README dort)
@@ -113,6 +114,9 @@ specs/           Spec-Kit-Spezifikationen (spec, plan, tasks)
 .specify/        Spec-Kit (Constitution, Vorlagen, Skripte)
 .claude/         Claude-Code-Regeln, Einstellungen und Spec-Kit-Skills
 ```
+
+> **Hinweis:** `src/renderer/src/assets/icon.png` (Logo im Header) ist eine Kopie von
+> `build/icon.png` (Icon der exe). Wird das Icon geändert, beide Dateien aktualisieren.
 
 <a id="vscode-start-de"></a>
 
@@ -317,7 +321,8 @@ src/
 │                import/ (read CSV/ODS/XLSX, write templates), ipc/
 ├── preload/     typed window.api bridge
 └── renderer/    React UI: features/ (applications, followup, gamification, import, settings),
-                 components/ui/, stores/, hooks/, lib/
+                 components/ui/, stores/, hooks/, lib/, assets/ (icon.png)
+build/           Build resources (icon.png = app icon of the exe)
 tests/
 ├── unit/        Unit & component tests (mirrors the src/ structure)
 ├── fixtures/    test files, e.g. import/ for every import edge case (see the README there)
@@ -328,6 +333,9 @@ specs/           Spec-Kit specifications (spec, plan, tasks)
 .specify/        Spec-Kit (constitution, templates, scripts)
 .claude/         Claude Code rules, settings and Spec-Kit skills
 ```
+
+> **Note:** `src/renderer/src/assets/icon.png` (logo in the header) is a copy of
+> `build/icon.png` (icon of the exe). When changing the icon, update both files.
 
 <a id="vscode-start-en"></a>
 
