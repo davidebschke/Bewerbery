@@ -125,7 +125,7 @@ describe('registerIpc', () => {
     const result = await invoke(IPC.exportApplicationsPdf, ['a1'])
 
     expect(result).toEqual({ canceled: false, filePath: 'C:/export.pdf' })
-    expect(pdfExport.exportApplications).toHaveBeenCalledWith([app1], exportData.settings, today)
+    expect(pdfExport.exportApplications).toHaveBeenCalledWith([app1], today)
   })
 
   it('validates the application ids for the pdf export', async () => {

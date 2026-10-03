@@ -1,75 +1,72 @@
 import { describe, expect, it } from 'vitest'
-import { makeApplication, makeSettings } from '../../../../src/shared/testing/fixtures'
-import { buildPdfSummary, wrapText } from '../../../../src/shared/domain/pdfSummary'
-
-const settings = makeSettings({ followUpWeeks: 2 })
-const today = new Date(2026, 8, 23)
+import { STAGE_LABELS } from '../../../../src/shared/constants'
+import { makeApplication } from '../../../../src/shared/testing/fixtures'
+import {
+  buildPdfSummary,
+  wrapText,
+  wrapTextToWidth,
+} from '../../../../src/shared/domain/pdfSummary'
 
 describe('buildPdfSummary', () => {
-  it('formats the sent date, stage and follow-up status in German', () => {
-    const [summary] = buildPdfSummary(
-      [makeApplication({ company: 'Muster GmbH', position: 'Dev', sentAt: '2026-09-16' })],
-      settings,
-      today,
-    )
-    expect(summary.company).toBe('Muster GmbH')
-    expect(summary.position).toBe('Dev')
-    expect(summary.stageLabel).toBe('Beworben')
-    expect(summary.sentLine).toBe('Abgeschickt am 16.09.2026 (vor 7 Tagen)')
-    expect(summary.followUpLine).not.toBe('')
+  it('takes company, position and contact data over unchanged', () => {
+    const [summary] = buildPdfSummary([
+      makeApplication({
+        company: 'Muster GmbH',
+        position: 'Dev',
+        contactName: 'Frau Beispiel',
+        contactPhone: '+49 30 1234567',
+        contactEmail: 'jobs@example.com',
+        notes: 'Eine Notiz',
+      }),
+    ])
+    expect(summary).toMatchObject({
+      company: 'Muster GmbH',
+      position: 'Dev',
+      contactName: 'Frau Beispiel',
+      contactPhone: '+49 30 1234567',
+      contactEmail: 'jobs@example.com',
+      notes: 'Eine Notiz',
+    })
   })
 
-  it('only includes contact lines that are actually filled in', () => {
-    const [empty] = buildPdfSummary([makeApplication()], settings, today)
-    expect(empty.contactLines).toEqual([])
+  it('formats the sent date and the status label in German', () => {
+    const [summary] = buildPdfSummary([
+      makeApplication({ sentAt: '2026-09-16', stage: 'interview' }),
+    ])
+    expect(summary.sentAtLabel).toBe('16.09.2026')
+    expect(summary.stageLabel).toBe(STAGE_LABELS.interview)
+  })
 
-    const [full] = buildPdfSummary(
-      [
-        makeApplication({
-          contactName: 'Frau Beispiel',
-          contactPhone: '+49 30 1234567',
-          contactEmail: 'jobs@example.com',
-        }),
-      ],
-      settings,
-      today,
-    )
-    expect(full.contactLines).toEqual([
-      'Ansprechpartner: Frau Beispiel',
-      'Telefon: +49 30 1234567',
-      'E-Mail: jobs@example.com',
+  it('does not export the follow-up deadline or the appointment', () => {
+    const [summary] = buildPdfSummary([
+      makeApplication({ stage: 'interview', appointmentAt: '2026-10-01T10:00' }),
+    ])
+    expect(Object.keys(summary).sort()).toEqual([
+      'company',
+      'contactEmail',
+      'contactName',
+      'contactPhone',
+      'documents',
+      'notes',
+      'position',
+      'sentAtLabel',
+      'stageLabel',
     ])
   })
 
-  it('adds an appointment line only when one is set', () => {
-    const [withAppointment] = buildPdfSummary(
-      [makeApplication({ stage: 'interview', appointmentAt: '2026-10-01T10:00' })],
-      settings,
-      today,
-    )
-    expect(withAppointment.appointmentLine).toBe('Termin am 01.10.2026 um 10:00 Uhr')
-
-    const [without] = buildPdfSummary([makeApplication()], settings, today)
-    expect(without.appointmentLine).toBeNull()
-  })
-
   it('maps documents to name and added date only, no file contents', () => {
-    const [summary] = buildPdfSummary(
-      [
-        makeApplication({
-          documents: [
-            { id: 'd1', name: 'Lebenslauf.pdf', storedName: 'd1-cv.pdf', size: 1024, addedAt: 'x' },
-          ],
-        }),
-      ],
-      settings,
-      today,
-    )
+    const [summary] = buildPdfSummary([
+      makeApplication({
+        documents: [
+          { id: 'd1', name: 'Lebenslauf.pdf', storedName: 'd1-cv.pdf', size: 1024, addedAt: 'x' },
+        ],
+      }),
+    ])
     expect(summary.documents).toEqual([{ name: 'Lebenslauf.pdf', addedAt: 'x' }])
   })
 
   it('returns an empty list for an empty selection', () => {
-    expect(buildPdfSummary([], settings, today)).toEqual([])
+    expect(buildPdfSummary([])).toEqual([])
   })
 })
 
@@ -100,6 +97,17 @@ describe('wrapText', () => {
       'Erster Absatz',
       '',
       'Zweiter Absatz',
+    ])
+  })
+})
+
+describe('wrapTextToWidth', () => {
+  it('wraps by measured width instead of character count', () => {
+    const measure = (text: string): number => text.replace(/i/g, '').length
+    expect(wrapTextToWidth('iiii iiii iiii abcd efgh', 4, measure)).toEqual([
+      'iiii iiii iiii',
+      'abcd',
+      'efgh',
     ])
   })
 })
