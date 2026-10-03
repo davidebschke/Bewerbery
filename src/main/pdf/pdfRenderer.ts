@@ -8,11 +8,15 @@ const PAGE_TOP = PAGE_SIZE[1] - MARGIN
 
 const CARD_PADDING = 12
 const CARD_RADIUS = 14
-const CARD_HEADER_HEIGHT = 22
+const PILL_HEIGHT = 20
+const PILL_RADIUS = 7
+const PILL_PADDING_X = 9
+const PILL_FONT_SIZE = 10
 const CARD_GAP = 16
 const TILE_PADDING = 10
 const TILE_RADIUS = 10
 const TILE_GAP = 8
+const CARD_HEADER_HEIGHT = PILL_HEIGHT + TILE_GAP
 const TILE_HEADER_HEIGHT = 18
 
 const TEXT_COLOR = rgb(0.1, 0.11, 0.15)
@@ -239,29 +243,58 @@ function countFittingLines(lines: TextLine[], room: number): number {
   return count
 }
 
-/** Kopfzeile der Karte: links „Abgeschickt am“, rechts der Status */
+interface PillPart {
+  text: string
+  font: PDFFont
+  color: ReturnType<typeof rgb>
+}
+
+function pillWidth(parts: PillPart[]): number {
+  const textWidth = parts.reduce(
+    (sum, part) => sum + part.font.widthOfTextAtSize(part.text, PILL_FONT_SIZE),
+    0,
+  )
+  return textWidth + 2 * PILL_PADDING_X
+}
+
+/** Kleines abgerundetes Feld mit mehrfarbigem Text; `x` ist die linke Kante */
+function drawPill(ctx: RenderContext, x: number, top: number, parts: PillPart[]): void {
+  drawRoundedBox(
+    ctx.page,
+    { x, top, width: pillWidth(parts), height: PILL_HEIGHT, radius: PILL_RADIUS },
+    { fill: TILE_FILL, border: TILE_BORDER },
+  )
+  const y = top - PILL_HEIGHT / 2 - PILL_FONT_SIZE * 0.35
+  let textX = x + PILL_PADDING_X
+  for (const part of parts) {
+    ctx.page.drawText(part.text, {
+      x: textX,
+      y,
+      size: PILL_FONT_SIZE,
+      font: part.font,
+      color: part.color,
+    })
+    textX += part.font.widthOfTextAtSize(part.text, PILL_FONT_SIZE)
+  }
+}
+
+/** Kopfzeile der Karte: links „Abgeschickt am“, rechts der Status – je in einem kleinen Feld */
 function drawCardHeader(
   ctx: RenderContext,
   summary: PdfApplicationSummary,
   area: { left: number; right: number; top: number },
 ): void {
   const { regular, bold } = ctx.fonts
-  const size = 10
-  const y = area.top - CARD_HEADER_HEIGHT / 2 - size * 0.35 + 1
-  const draw = (text: string, x: number, font: PDFFont, color: ReturnType<typeof rgb>): number => {
-    ctx.page.drawText(text, { x, y, size, font, color })
-    return font.widthOfTextAtSize(text, size)
-  }
-
-  const sentLabel = 'Abgeschickt am '
-  const sentWidth = draw(sentLabel, area.left, regular, MUTED_COLOR)
-  draw(summary.sentAtLabel, area.left + sentWidth, bold, TEXT_COLOR)
-
-  const statusLabel = 'Status: '
-  const stageWidth = bold.widthOfTextAtSize(summary.stageLabel, size)
-  const statusX = area.right - stageWidth - regular.widthOfTextAtSize(statusLabel, size)
-  draw(statusLabel, statusX, regular, MUTED_COLOR)
-  draw(summary.stageLabel, area.right - stageWidth, bold, BRAND_COLOR)
+  const sent: PillPart[] = [
+    { text: 'Abgeschickt am ', font: regular, color: MUTED_COLOR },
+    { text: summary.sentAtLabel, font: bold, color: TEXT_COLOR },
+  ]
+  const status: PillPart[] = [
+    { text: 'Status: ', font: regular, color: MUTED_COLOR },
+    { text: summary.stageLabel, font: bold, color: BRAND_COLOR },
+  ]
+  drawPill(ctx, area.left, area.top, sent)
+  drawPill(ctx, area.right - pillWidth(status), area.top, status)
 }
 
 /**
