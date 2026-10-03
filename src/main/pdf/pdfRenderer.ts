@@ -8,6 +8,7 @@ const PAGE_TOP = PAGE_SIZE[1] - MARGIN
 
 const CARD_PADDING = 12
 const CARD_RADIUS = 14
+const CARD_HEADER_HEIGHT = 22
 const CARD_GAP = 16
 const TILE_PADDING = 10
 const TILE_RADIUS = 10
@@ -238,8 +239,33 @@ function countFittingLines(lines: TextLine[], room: number): number {
   return count
 }
 
+/** Kopfzeile der Karte: links „Abgeschickt am“, rechts der Status */
+function drawCardHeader(
+  ctx: RenderContext,
+  summary: PdfApplicationSummary,
+  area: { left: number; right: number; top: number },
+): void {
+  const { regular, bold } = ctx.fonts
+  const size = 10
+  const y = area.top - CARD_HEADER_HEIGHT / 2 - size * 0.35 + 1
+  const draw = (text: string, x: number, font: PDFFont, color: ReturnType<typeof rgb>): number => {
+    ctx.page.drawText(text, { x, y, size, font, color })
+    return font.widthOfTextAtSize(text, size)
+  }
+
+  const sentLabel = 'Abgeschickt am '
+  const sentWidth = draw(sentLabel, area.left, regular, MUTED_COLOR)
+  draw(summary.sentAtLabel, area.left + sentWidth, bold, TEXT_COLOR)
+
+  const statusLabel = 'Status: '
+  const stageWidth = bold.widthOfTextAtSize(summary.stageLabel, size)
+  const statusX = area.right - stageWidth - regular.widthOfTextAtSize(statusLabel, size)
+  draw(statusLabel, statusX, regular, MUTED_COLOR)
+  draw(summary.stageLabel, area.right - stageWidth, bold, BRAND_COLOR)
+}
+
 /**
- * Zeichnet eine Bewerbung als abgerundete Karte mit drei Kacheln: „Unternehmen und Position“,
+ * Zeichnet eine Bewerbung als abgerundete Karte (Kopfzeile „Abgeschickt am“/„Status“) mit drei Kacheln: „Unternehmen und Position“,
  * „Kontakt zum Unternehmen“ sowie „Dokumente und Notizen“. Lange Notizen laufen auf Folgeseiten weiter.
  */
 function renderApplication(ctx: RenderContext, summary: PdfApplicationSummary): void {
@@ -252,12 +278,13 @@ function renderApplication(ctx: RenderContext, summary: PdfApplicationSummary): 
   const topRowHeight = Math.max(tileHeight(companyLines), tileHeight(contactLines))
   let remaining = buildDetailLines(ctx.fonts, summary, innerWidth - 2 * TILE_PADDING)
 
-  const wholeHeight = 2 * CARD_PADDING + topRowHeight + TILE_GAP + tileHeight(remaining)
+  const firstBlockHeight = CARD_HEADER_HEIGHT + topRowHeight + TILE_GAP
+  const wholeHeight = 2 * CARD_PADDING + firstBlockHeight + tileHeight(remaining)
   if (wholeHeight > ctx.y - MARGIN && wholeHeight <= PAGE_TOP - MARGIN) newPage(ctx)
 
   let isFirstFragment = true
   while (remaining.length > 0) {
-    const topRow = isFirstFragment ? topRowHeight + TILE_GAP : 0
+    const topRow = isFirstFragment ? firstBlockHeight : 0
     const chrome = 2 * CARD_PADDING + topRow + 2 * TILE_PADDING + TILE_HEADER_HEIGHT
     let count = countFittingLines(remaining, ctx.y - MARGIN - chrome)
     if (count === 0) {
@@ -280,6 +307,8 @@ function renderApplication(ctx: RenderContext, summary: PdfApplicationSummary): 
       { fill: CARD_FILL, border: CARD_BORDER },
     )
     if (isFirstFragment) {
+      drawCardHeader(ctx, summary, { left, right: left + innerWidth, top })
+      top -= CARD_HEADER_HEIGHT
       const tileBox = { top, width: halfWidth, height: topRowHeight }
       drawTile(ctx, { ...tileBox, x: left }, 'Unternehmen und Position', companyLines)
       drawTile(

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { STAGE_LABELS } from '../../../../src/shared/constants'
 import { makeApplication } from '../../../../src/shared/testing/fixtures'
 import {
   buildPdfSummary,
@@ -28,7 +29,15 @@ describe('buildPdfSummary', () => {
     })
   })
 
-  it('does not export follow-up, status, sent date or appointment', () => {
+  it('formats the sent date and the status label in German', () => {
+    const [summary] = buildPdfSummary([
+      makeApplication({ sentAt: '2026-09-16', stage: 'interview' }),
+    ])
+    expect(summary.sentAtLabel).toBe('16.09.2026')
+    expect(summary.stageLabel).toBe(STAGE_LABELS.interview)
+  })
+
+  it('does not export the follow-up deadline or the appointment', () => {
     const [summary] = buildPdfSummary([
       makeApplication({ stage: 'interview', appointmentAt: '2026-10-01T10:00' }),
     ])
@@ -40,6 +49,8 @@ describe('buildPdfSummary', () => {
       'documents',
       'notes',
       'position',
+      'sentAtLabel',
+      'stageLabel',
     ])
   })
 

@@ -1,4 +1,6 @@
+import { STAGE_LABELS } from '../constants'
 import type { Application } from '../types'
+import { formatGermanDate } from './dates'
 
 export interface PdfDocumentSummary {
   name: string
@@ -6,6 +8,8 @@ export interface PdfDocumentSummary {
 }
 
 export interface PdfApplicationSummary {
+  sentAtLabel: string
+  stageLabel: string
   company: string
   position: string
   contactName: string
@@ -18,6 +22,8 @@ export interface PdfApplicationSummary {
 /** Bereitet ausgewählte Bewerbungen als reine Textbausteine für den PDF-Export auf */
 export function buildPdfSummary(applications: Application[]): PdfApplicationSummary[] {
   return applications.map((application) => ({
+    sentAtLabel: formatGermanDate(application.sentAt),
+    stageLabel: STAGE_LABELS[application.stage],
     company: application.company,
     position: application.position,
     contactName: application.contactName,

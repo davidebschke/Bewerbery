@@ -42,9 +42,10 @@ Notizen. Ein Fortschrittsbalken zeigt an, wann eine Nachfrage fällig ist, fäll
 im Bereich „Jetzt melden" angepinnt, und der Bewerbungsstatus durchläuft eine Pipeline von
 „Beworben" über „Termin" bis „Angebot / Absage". Über den Button „Als PDF exportieren" lassen sich
 ausgewählte Bewerbungen (einzeln oder per „Alle auswählen") als druckbare Zusammenfassung
-an einen frei wählbaren Ort speichern: Jede Bewerbung erscheint als abgerundete Karte mit drei
-Kacheln („Unternehmen und Position", „Kontakt zum Unternehmen", „Dokumente und Notizen" – nur
-Dokumentnamen, keine Dateiinhalte; Status und Fristen werden nicht exportiert).
+an einen frei wählbaren Ort speichern: Jede Bewerbung erscheint als abgerundete Karte mit
+Kopfzeile („Abgeschickt am" links, „Status" rechts) und drei Kacheln („Unternehmen und Position",
+„Kontakt zum Unternehmen", „Dokumente und Notizen" – nur Dokumentnamen, keine Dateiinhalte; die
+Nachfass-Frist wird nicht exportiert).
 Ein dezentes Gamification-System (XP, Level, Abzeichen, Wochen-Serie, Konfetti) motiviert am Ball zu
 bleiben, und optionale System-Benachrichtigungen erinnern rechtzeitig ans Nachhaken.
 
@@ -209,8 +210,9 @@ shows when a follow-up is due, due applications are pinned in the "Follow up now
 application status moves through a pipeline from "Applied" to "Interview" to "Offer / Rejection".
 The "Export as PDF" button lets you select applications (individually or via "Select all") and save
 a printable summary to a location of your choice: each application is shown as a rounded card with
-three tiles ("Company and position", "Contact at the company", "Documents and notes" – document
-names only, no file contents; status and deadlines are not exported). A subtle gamification system (XP, levels, badges, weekly streak, confetti)
+a header line ("Sent on" on the left, "Status" on the right) and three tiles ("Company and
+position", "Contact at the company", "Documents and notes" – document names only, no file contents;
+the follow-up deadline is not exported). A subtle gamification system (XP, levels, badges, weekly streak, confetti)
 keeps you motivated, and optional system notifications remind you to follow up in time.
 
 All data stays **100 % local** on the machine (`%APPDATA%/Bewerbery` on Windows, or
