@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { makeApplication, makeSettings } from '../../../../src/shared/testing/fixtures'
+import { makeApplication } from '../../../../src/shared/testing/fixtures'
 import { createPdfExportService } from '../../../../src/main/pdf/pdfExportService'
 
 let dir: string
@@ -16,7 +16,6 @@ afterEach(async () => {
 })
 
 describe('pdfExportService', () => {
-  const settings = makeSettings({ followUpWeeks: 2 })
   const today = new Date(2026, 8, 23)
 
   it('writes a pdf to the chosen path and suggests a dated file name', async () => {
@@ -24,7 +23,7 @@ describe('pdfExportService', () => {
     const saveFile = vi.fn(async () => filePath)
     const service = createPdfExportService(saveFile)
 
-    const result = await service.exportApplications([makeApplication()], settings, today)
+    const result = await service.exportApplications([makeApplication()], today)
 
     expect(result).toEqual({ canceled: false, filePath })
     expect(saveFile).toHaveBeenCalledWith('Bewerbungen-Zusammenfassung-2026-09-23.pdf')
@@ -36,7 +35,7 @@ describe('pdfExportService', () => {
     const saveFile = vi.fn(async () => null)
     const service = createPdfExportService(saveFile)
 
-    const result = await service.exportApplications([makeApplication()], settings, today)
+    const result = await service.exportApplications([makeApplication()], today)
 
     expect(result).toEqual({ canceled: true })
   })

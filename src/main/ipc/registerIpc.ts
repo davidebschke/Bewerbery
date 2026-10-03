@@ -71,6 +71,6 @@ export function registerIpc(deps: IpcDeps): void {
     const ids = new Set(applicationIdsSchema.parse(applicationIds))
     const data = await dataStore.load()
     const selected = data.applications.filter((application) => ids.has(application.id))
-    return deps.pdfExport.exportApplications(selected, data.settings, deps.now())
+    return deps.pdfExport.exportApplications(selected, deps.now())
   })
 }
