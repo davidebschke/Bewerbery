@@ -242,7 +242,16 @@ const CATEGORIES: CategoryDefinition[] = [
     title: 'Termine',
     metric: (p) => p.interviews,
     describe: counted('Ersten Termin erhalten', (n) => `${n} Termine erhalten`),
-    tiers: [{ threshold: 1, title: 'Einladung!', icon: '🎤' }],
+    tiers: [
+      { threshold: 1, title: 'Einladung!', icon: '🎤' },
+      { threshold: 10, title: 'Gesprächsbereit', icon: '🗣️' },
+      { threshold: 25, title: 'Gefragter Kandidat', icon: '🌟' },
+      { threshold: 50, title: 'Voller Terminkalender', icon: '📅' },
+      { threshold: 100, title: 'Bühnenprofi', icon: '🎭' },
+      { threshold: 150, title: 'Smalltalk-Champion', icon: '☕' },
+      { threshold: 200, title: 'Interview-Veteran', icon: '🎖️' },
+      { threshold: 1000, title: 'Gesprächslegende', icon: '🏛️' },
+    ],
   },
   {
     category: 'offers',

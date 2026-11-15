@@ -280,3 +280,24 @@ describe('follow-up badges', () => {
     })
   })
 })
+
+describe('interview badges', () => {
+  it('has tiers from 1 to 1000 interviews', () => {
+    expect(categoryBadges('interviews').map((b) => b.target)).toEqual([
+      1, 10, 25, 50, 100, 150, 200, 1000,
+    ])
+  })
+
+  it('unlocks tiers up to the current count', () => {
+    const badges = categoryBadges('interviews', { interviews: 10 })
+    expect(badges.filter((b) => b.unlocked).map((b) => b.title)).toEqual([
+      'Einladung!',
+      'Gesprächsbereit',
+    ])
+    expect(badges[2]).toMatchObject({
+      title: 'Gefragter Kandidat',
+      description: '25 Termine erhalten',
+      current: 10,
+    })
+  })
+})
