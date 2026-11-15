@@ -1,5 +1,5 @@
 import confetti from 'canvas-confetti'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MAX_LEVEL, xpForLevel } from '@shared/domain/gamification'
@@ -66,6 +66,23 @@ describe('BadgesDialog', () => {
     expect(screen.getByText(/Noch 30 XP bis Level 2/)).toBeInTheDocument()
     expect(screen.getByRole('listitem', { name: 'Erster Schritt' })).toBeInTheDocument()
     expect(screen.getByRole('listitem', { name: 'Volltreffer (gesperrt)' })).toBeInTheDocument()
+  })
+
+  it('groups badges into category sections with progress', () => {
+    const progress = progressSchema.parse({ applicationsCreated: 17 })
+    render(<BadgesDialog open onClose={() => {}} progress={progress} today={today} />)
+    const section = screen.getByRole('region', { name: /Bewerbungen/ })
+    expect(within(section).getByText('2/3 freigeschaltet')).toBeInTheDocument()
+    const marathon = within(section).getByRole('listitem', { name: 'Marathon (gesperrt)' })
+    expect(within(marathon).getByText('17/25')).toBeInTheDocument()
+    expect(
+      within(marathon).getByRole('progressbar', { name: 'Fortschritt Marathon' }),
+    ).toHaveAttribute('aria-valuenow', '68')
+    const unlocked = within(section).getByRole('listitem', { name: 'Fleißig' })
+    expect(within(unlocked).queryByRole('progressbar')).not.toBeInTheDocument()
+    for (const title of ['Nachfragen', 'Termine', 'Angebote', 'Absagen', 'Serien']) {
+      expect(screen.getByRole('region', { name: new RegExp(title) })).toBeInTheDocument()
+    }
   })
 
   it('omits the next-level hint at max level', () => {
