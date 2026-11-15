@@ -321,3 +321,13 @@ export function getBadgeGroups(progress: Progress, today: Date): BadgeGroup[] {
 export function getBadges(progress: Progress, today: Date): Badge[] {
   return getBadgeGroups(progress, today).flatMap((group) => group.badges)
 }
+
+/** Abzeichen, die zwischen zwei Fortschritts-Ständen neu freigeschaltet wurden */
+export function newlyUnlockedBadges(before: Progress, after: Progress, today: Date): Badge[] {
+  const previous = new Set(
+    getBadges(before, today)
+      .filter((badge) => badge.unlocked)
+      .map((badge) => badge.id),
+  )
+  return getBadges(after, today).filter((badge) => badge.unlocked && !previous.has(badge.id))
+}

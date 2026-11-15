@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { AlertTriangle, Info, Sparkles, Trophy } from 'lucide-react'
+import { AlertTriangle, Award, Info, Sparkles, Trophy } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useAppStore, type Toast, type ToastKind } from '../../stores/appStore'
 
@@ -8,6 +8,7 @@ export const TOAST_DURATION_MS = 3500
 const STYLES: Record<ToastKind, { icon: typeof Info; className: string }> = {
   xp: { icon: Sparkles, className: 'border-brand/40' },
   level: { icon: Trophy, className: 'border-warn/60' },
+  badge: { icon: Award, className: 'border-warn/60' },
   info: { icon: Info, className: 'border-line' },
   error: { icon: AlertTriangle, className: 'border-due/60 text-due' },
 }

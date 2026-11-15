@@ -11,6 +11,7 @@ import {
   getLevelInfo,
   getStreak,
   levelForXp,
+  newlyUnlockedBadges,
   rankTitle,
   stageEvent,
   xpForLevel,
@@ -358,5 +359,28 @@ describe('streak badges', () => {
       description: '52 Wochen in Folge aktiv',
       current: 5,
     })
+  })
+})
+
+describe('newlyUnlockedBadges', () => {
+  it('returns badges unlocked by an XP event', () => {
+    const before = { ...empty, applicationsCreated: 9 }
+    const after = awardXp(before, 'create', today).progress
+    expect(newlyUnlockedBadges(before, after, today).map((b) => b.id)).toEqual(['applications-10'])
+  })
+
+  it('detects streak badges reached with the current week', () => {
+    const before = { ...empty, activeWeeks: ['2026-W37', '2026-W38'] }
+    const after = awardXp(before, 'followUp', today).progress
+    expect(newlyUnlockedBadges(before, after, today).map((b) => b.id)).toEqual([
+      'followUps-1',
+      'streak-3',
+    ])
+  })
+
+  it('returns nothing when no new tier is reached', () => {
+    const before = { ...empty, applicationsCreated: 10 }
+    const after = awardXp(before, 'create', today).progress
+    expect(newlyUnlockedBadges(before, after, today)).toEqual([])
   })
 })

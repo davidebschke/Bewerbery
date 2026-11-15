@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { toIsoDate } from '@shared/domain/dates'
 import { createApplication, createEmptyData } from '@shared/domain/factory'
-import { awardXp, stageEvent, type XpEvent } from '@shared/domain/gamification'
+import { awardXp, newlyUnlockedBadges, stageEvent, type XpEvent } from '@shared/domain/gamification'
 import { applicationInputSchema, settingsSchema } from '@shared/schemas'
 import type {
   AppData,
@@ -13,7 +13,7 @@ import type {
 } from '@shared/types'
 import { getApi } from '../lib/api'
 
-export type ToastKind = 'xp' | 'level' | 'info' | 'error'
+export type ToastKind = 'xp' | 'level' | 'badge' | 'info' | 'error'
 
 export interface Toast {
   id: number
@@ -77,10 +77,14 @@ export const useAppStore = create<AppState>()((set, get) => {
       .catch(() => get().pushToast('error', 'Speichern fehlgeschlagen. Bitte erneut versuchen.'))
   }
 
-  /** Vergibt XP, zeigt Toast und löst ggf. Level-Up-Feier aus */
+  /** Vergibt XP, zeigt Toasts (XP, neue Abzeichen) und löst ggf. Level-Up-Feier aus */
   function reward(data: AppData, event: XpEvent): AppData {
-    const result = awardXp(data.progress, event, new Date())
+    const today = new Date()
+    const result = awardXp(data.progress, event, today)
     get().pushToast('xp', `+${result.gained} XP · ${XP_MESSAGES[event]}`)
+    for (const badge of newlyUnlockedBadges(data.progress, result.progress, today)) {
+      get().pushToast('badge', `Abzeichen freigeschaltet: ${badge.icon} ${badge.title}`)
+    }
     if (result.leveledUp) {
       get().pushToast('level', 'Level-Up! 🎉')
       set({ celebration: { id: nextId(), kind: 'level' } })
