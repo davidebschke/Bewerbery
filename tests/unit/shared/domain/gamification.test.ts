@@ -9,6 +9,7 @@ import {
   getLevelInfo,
   getStreak,
   levelForXp,
+  rankTitle,
   stageEvent,
   xpForLevel,
 } from '../../../../src/shared/domain/gamification'
@@ -34,6 +35,31 @@ describe('xpForLevel', () => {
   it('clamps out-of-range levels', () => {
     expect(xpForLevel(0)).toBe(0)
     expect(xpForLevel(MAX_LEVEL + 10)).toBe(xpForLevel(MAX_LEVEL))
+  })
+})
+
+describe('rankTitle', () => {
+  it('keeps one title per early level', () => {
+    expect(rankTitle(1)).toBe('Bewerbungs-Rookie')
+    expect(rankTitle(7)).toBe('Jobjäger-Legende')
+  })
+
+  it('shares a title within growing level blocks', () => {
+    expect([8, 9].map(rankTitle)).toEqual(['Bewerbungs-Veteran', 'Bewerbungs-Veteran'])
+    expect([10, 14].map(rankTitle)).toEqual(['Lebenslauf-Virtuose', 'Lebenslauf-Virtuose'])
+    expect(rankTitle(15)).toBe('Gesprächs-Diplomat')
+    expect(rankTitle(49)).toBe('Personaler-Flüsterer')
+    expect(rankTitle(99)).toBe('Karriere-Architekt')
+    expect(rankTitle(249)).toBe('Jobmarkt-Meister')
+    expect(rankTitle(499)).toBe('Bewerbungs-Großmeister')
+    expect(rankTitle(999)).toBe('Branchen-Ikone')
+    expect(rankTitle(2499)).toBe('Karriere-Titan')
+    expect(rankTitle(4999)).toBe('Mythos des Arbeitsmarkts')
+  })
+
+  it('reserves a unique title for the max level', () => {
+    expect(rankTitle(MAX_LEVEL)).toBe('Unsterbliche Bewerbungs-Legende')
+    expect(getLevel(MAX_LEVEL).title).toBe('Unsterbliche Bewerbungs-Legende')
   })
 })
 

@@ -30,6 +30,17 @@ const RANKS: Rank[] = [
   { minLevel: 5, title: 'Interview-Ass' },
   { minLevel: 6, title: 'Karriere-Stratege' },
   { minLevel: 7, title: 'Jobjäger-Legende' },
+  { minLevel: 8, title: 'Bewerbungs-Veteran' },
+  { minLevel: 10, title: 'Lebenslauf-Virtuose' },
+  { minLevel: 15, title: 'Gesprächs-Diplomat' },
+  { minLevel: 25, title: 'Personaler-Flüsterer' },
+  { minLevel: 50, title: 'Karriere-Architekt' },
+  { minLevel: 100, title: 'Jobmarkt-Meister' },
+  { minLevel: 250, title: 'Bewerbungs-Großmeister' },
+  { minLevel: 500, title: 'Branchen-Ikone' },
+  { minLevel: 1000, title: 'Karriere-Titan' },
+  { minLevel: 2500, title: 'Mythos des Arbeitsmarkts' },
+  { minLevel: MAX_LEVEL, title: 'Unsterbliche Bewerbungs-Legende' },
 ]
 
 function clampLevel(level: number): number {

@@ -29,7 +29,7 @@ describe('XpBar', () => {
 
   it('formats large XP values with thousands separators', () => {
     render(<XpBar xp={xpForLevel(100) + 1100} onOpenBadges={() => {}} />)
-    expect(screen.getByRole('button', { name: /Level 100:/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Level 100: Jobmarkt-Meister/ })).toBeInTheDocument()
     expect(screen.getByText('1.100/1.190 XP')).toBeInTheDocument()
   })
 
