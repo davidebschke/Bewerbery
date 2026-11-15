@@ -8,15 +8,74 @@ export interface Level {
   minXp: number
 }
 
-export const LEVELS: Level[] = [
-  { level: 1, title: 'Bewerbungs-Rookie', minXp: 0 },
-  { level: 2, title: 'Motivierter Starter', minXp: 50 },
-  { level: 3, title: 'Netzwerk-Entdecker', minXp: 120 },
-  { level: 4, title: 'Nachfass-Profi', minXp: 220 },
-  { level: 5, title: 'Interview-Ass', minXp: 360 },
-  { level: 6, title: 'Karriere-Stratege', minXp: 550 },
-  { level: 7, title: 'Jobjäger-Legende', minXp: 800 },
+export const MAX_LEVEL = 5000
+
+/** Handverlesene XP-Schwellen der ersten Level (Index 0 = Level 1) */
+const BASE_THRESHOLDS = [0, 50, 120, 220, 360, 550, 800]
+/** Abstand zwischen den letzten festen Leveln – danach wächst er pro Level um STEP_GROWTH */
+const BASE_STEP = 250
+const STEP_GROWTH = 10
+
+interface Rank {
+  minLevel: number
+  title: string
+}
+
+/** Rangtitel – ein Titel gilt ab `minLevel` bis zum nächsten Rang */
+const RANKS: Rank[] = [
+  { minLevel: 1, title: 'Bewerbungs-Rookie' },
+  { minLevel: 2, title: 'Motivierter Starter' },
+  { minLevel: 3, title: 'Netzwerk-Entdecker' },
+  { minLevel: 4, title: 'Nachfass-Profi' },
+  { minLevel: 5, title: 'Interview-Ass' },
+  { minLevel: 6, title: 'Karriere-Stratege' },
+  { minLevel: 7, title: 'Jobjäger-Legende' },
 ]
+
+function clampLevel(level: number): number {
+  return Math.min(Math.max(Math.floor(level), 1), MAX_LEVEL)
+}
+
+/** Mindest-XP für ein Level */
+export function xpForLevel(level: number): number {
+  const n = clampLevel(level)
+  if (n <= BASE_THRESHOLDS.length) return BASE_THRESHOLDS[n - 1]
+  const m = n - BASE_THRESHOLDS.length
+  const last = BASE_THRESHOLDS[BASE_THRESHOLDS.length - 1]
+  return last + BASE_STEP * m + (STEP_GROWTH * m * (m + 1)) / 2
+}
+
+export function rankTitle(level: number): string {
+  const n = clampLevel(level)
+  let title = RANKS[0].title
+  for (const rank of RANKS) {
+    if (n >= rank.minLevel) title = rank.title
+  }
+  return title
+}
+
+export function getLevel(level: number): Level {
+  const n = clampLevel(level)
+  return { level: n, title: rankTitle(n), minXp: xpForLevel(n) }
+}
+
+/** Höchstes erreichtes Level für eine XP-Summe */
+export function levelForXp(xp: number): number {
+  const base = BASE_THRESHOLDS.length
+  if (xp < xpForLevel(base)) {
+    return BASE_THRESHOLDS.filter((minXp) => xp >= minXp).length || 1
+  }
+  // Quadratische Gleichung für die wachsende Kurve lösen, danach Rundungsfehler korrigieren
+  const half = STEP_GROWTH / 2
+  const linear = BASE_STEP + half
+  const rest = xp - xpForLevel(base)
+  let level =
+    base + Math.floor((-linear + Math.sqrt(linear * linear + 4 * half * rest)) / (2 * half))
+  level = clampLevel(level)
+  while (level < MAX_LEVEL && xpForLevel(level + 1) <= xp) level++
+  while (level > 1 && xpForLevel(level) > xp) level--
+  return level
+}
 
 export interface LevelInfo {
   current: Level
@@ -28,12 +87,9 @@ export interface LevelInfo {
 }
 
 export function getLevelInfo(xp: number): LevelInfo {
-  let index = 0
-  for (let i = 0; i < LEVELS.length; i++) {
-    if (xp >= LEVELS[i].minXp) index = i
-  }
-  const current = LEVELS[index]
-  const next = LEVELS[index + 1] ?? null
+  const level = levelForXp(xp)
+  const current = getLevel(level)
+  const next = level < MAX_LEVEL ? getLevel(level + 1) : null
   if (!next) {
     return { current, next, progress: 1, xpIntoLevel: xp - current.minXp, xpForNext: 0 }
   }

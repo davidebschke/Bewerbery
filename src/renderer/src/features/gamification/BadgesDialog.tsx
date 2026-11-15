@@ -1,4 +1,5 @@
-import { getBadges, getLevelInfo, LEVELS } from '@shared/domain/gamification'
+import { getBadges, getLevelInfo, MAX_LEVEL } from '@shared/domain/gamification'
+import { formatNumber } from '@shared/domain/numbers'
 import type { Progress } from '@shared/types'
 import { Dialog } from '../../components/ui/Dialog'
 import { cn } from '../../lib/cn'
@@ -19,9 +20,10 @@ export function BadgesDialog({ open, onClose, progress, today }: BadgesDialogPro
     <Dialog open={open} onClose={onClose} title="Deine Erfolge 🏆" size="lg">
       <div className="flex flex-col gap-5">
         <p className="text-sm text-muted">
-          Level {level.current.level} von {LEVELS.length} · {progress.xp} XP · {unlocked} von{' '}
-          {badges.length} Abzeichen freigeschaltet
-          {level.next && ` · Noch ${level.xpForNext} XP bis „${level.next.title}“`}
+          Level {formatNumber(level.current.level)} von {formatNumber(MAX_LEVEL)} ·{' '}
+          {formatNumber(progress.xp)} XP · {unlocked} von {badges.length} Abzeichen freigeschaltet
+          {level.next &&
+            ` · Noch ${formatNumber(level.xpForNext)} XP bis Level ${formatNumber(level.next.level)}`}
         </p>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2" aria-label="Abzeichen">
           {badges.map((badge) => (

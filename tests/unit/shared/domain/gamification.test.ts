@@ -1,16 +1,64 @@
 import { describe, expect, it } from 'vitest'
 import { progressSchema } from '../../../../src/shared/schemas'
 import { makeApplication } from '../../../../src/shared/testing/fixtures'
-import { LEVELS, awardXp, getBadges, getLevelInfo, getStreak, stageEvent } from '../../../../src/shared/domain/gamification'
+import {
+  MAX_LEVEL,
+  awardXp,
+  getBadges,
+  getLevel,
+  getLevelInfo,
+  getStreak,
+  levelForXp,
+  stageEvent,
+  xpForLevel,
+} from '../../../../src/shared/domain/gamification'
 
 const today = new Date(2026, 8, 23) // KW 39
 const empty = progressSchema.parse({})
 
+describe('xpForLevel', () => {
+  it('keeps the hand-picked thresholds of the first levels', () => {
+    expect([1, 2, 3, 4, 5, 6, 7].map(xpForLevel)).toEqual([0, 50, 120, 220, 360, 550, 800])
+  })
+
+  it('grows each step by 10 XP after level 7', () => {
+    expect(xpForLevel(8) - xpForLevel(7)).toBe(260)
+    expect(xpForLevel(9) - xpForLevel(8)).toBe(270)
+    expect(xpForLevel(100) - xpForLevel(99)).toBe(250 + 10 * 93)
+  })
+
+  it('reaches level 5000 at about 125 million XP', () => {
+    expect(xpForLevel(MAX_LEVEL)).toBe(125_924_260)
+  })
+
+  it('clamps out-of-range levels', () => {
+    expect(xpForLevel(0)).toBe(0)
+    expect(xpForLevel(MAX_LEVEL + 10)).toBe(xpForLevel(MAX_LEVEL))
+  })
+})
+
+describe('levelForXp', () => {
+  it('is the inverse of xpForLevel at every threshold', () => {
+    for (const level of [1, 2, 7, 8, 9, 46, 100, 999, 1000, 4999, MAX_LEVEL]) {
+      expect(levelForXp(xpForLevel(level))).toBe(level)
+      if (level > 1) expect(levelForXp(xpForLevel(level) - 1)).toBe(level - 1)
+    }
+  })
+
+  it('never exceeds the max level', () => {
+    expect(levelForXp(Number.MAX_SAFE_INTEGER)).toBe(MAX_LEVEL)
+  })
+
+  it('stays on level 1 for negative values', () => {
+    expect(levelForXp(-5)).toBe(1)
+  })
+})
+
 describe('getLevelInfo', () => {
   it('starts at level 1', () => {
     expect(getLevelInfo(0)).toMatchObject({
-      current: LEVELS[0],
-      next: LEVELS[1],
+      current: getLevel(1),
+      next: getLevel(2),
       progress: 0,
       xpForNext: 50,
     })
@@ -23,11 +71,18 @@ describe('getLevelInfo', () => {
     expect(info.progress).toBeCloseTo(0.5)
   })
 
-  it('caps at the max level', () => {
+  it('continues beyond the former max level', () => {
     const info = getLevelInfo(5000)
-    expect(info.current.title).toBe('Jobjäger-Legende')
+    expect(info.current.level).toBe(20)
+    expect(info.next?.level).toBe(21)
+  })
+
+  it('caps at the max level', () => {
+    const info = getLevelInfo(xpForLevel(MAX_LEVEL) + 1000)
+    expect(info.current.level).toBe(MAX_LEVEL)
     expect(info.next).toBeNull()
     expect(info.progress).toBe(1)
+    expect(info.xpIntoLevel).toBe(1000)
   })
 })
 

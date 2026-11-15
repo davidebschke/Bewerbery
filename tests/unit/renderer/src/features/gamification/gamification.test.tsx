@@ -2,6 +2,7 @@ import confetti from 'canvas-confetti'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MAX_LEVEL, xpForLevel } from '@shared/domain/gamification'
 import { progressSchema } from '@shared/schemas'
 import { makeApplication, makeData } from '@shared/testing/fixtures'
 import { freezeToday } from '../../../../../../src/renderer/src/test/utils'
@@ -26,9 +27,15 @@ describe('XpBar', () => {
     expect(onOpen).toHaveBeenCalled()
   })
 
+  it('formats large XP values with thousands separators', () => {
+    render(<XpBar xp={xpForLevel(100) + 1100} onOpenBadges={() => {}} />)
+    expect(screen.getByRole('button', { name: /Level 100:/ })).toBeInTheDocument()
+    expect(screen.getByText('1.100/1.190 XP')).toBeInTheDocument()
+  })
+
   it('shows total XP at max level', () => {
-    render(<XpBar xp={999} onOpenBadges={() => {}} />)
-    expect(screen.getByText('999 XP')).toBeInTheDocument()
+    render(<XpBar xp={xpForLevel(MAX_LEVEL)} onOpenBadges={() => {}} />)
+    expect(screen.getByText('125.924.260 XP')).toBeInTheDocument()
   })
 })
 
@@ -56,7 +63,7 @@ describe('BadgesDialog', () => {
     const progress = progressSchema.parse({ xp: 20, applicationsCreated: 1 })
     render(<BadgesDialog open onClose={() => {}} progress={progress} today={today} />)
     expect(screen.getByText(/1 von 9 Abzeichen/)).toBeInTheDocument()
-    expect(screen.getByText(/Noch 30 XP bis „Motivierter Starter“/)).toBeInTheDocument()
+    expect(screen.getByText(/Noch 30 XP bis Level 2/)).toBeInTheDocument()
     expect(screen.getByRole('listitem', { name: 'Erster Schritt' })).toBeInTheDocument()
     expect(screen.getByRole('listitem', { name: 'Volltreffer (gesperrt)' })).toBeInTheDocument()
   })
@@ -66,10 +73,11 @@ describe('BadgesDialog', () => {
       <BadgesDialog
         open
         onClose={() => {}}
-        progress={progressSchema.parse({ xp: 5000 })}
+        progress={progressSchema.parse({ xp: xpForLevel(MAX_LEVEL) })}
         today={today}
       />,
     )
+    expect(screen.getByText(/Level 5\.000 von 5\.000/)).toBeInTheDocument()
     expect(screen.queryByText(/Noch .* XP bis/)).not.toBeInTheDocument()
   })
 })
