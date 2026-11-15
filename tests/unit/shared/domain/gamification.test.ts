@@ -301,3 +301,26 @@ describe('interview badges', () => {
     })
   })
 })
+
+describe('rejection badges', () => {
+  it('has tiers from 1 to 1000 rejections', () => {
+    expect(categoryBadges('rejections').map((b) => b.target)).toEqual([
+      1, 10, 25, 50, 100, 150, 200, 1000,
+    ])
+  })
+
+  it('unlocks tiers up to the current count', () => {
+    const badges = categoryBadges('rejections', { rejections: 60 })
+    expect(badges.filter((b) => b.unlocked).map((b) => b.title)).toEqual([
+      'Stehaufmännchen',
+      'Dickes Fell',
+      'Unerschütterlich',
+      'Phönix aus der Asche',
+    ])
+    expect(badges[4]).toMatchObject({
+      title: 'Die Ruhe selbst',
+      description: '100 Absagen weggesteckt – weiter geht’s',
+      current: 60,
+    })
+  })
+})

@@ -268,7 +268,16 @@ const CATEGORIES: CategoryDefinition[] = [
       'Absage weggesteckt – weiter geht’s',
       (n) => `${n} Absagen weggesteckt – weiter geht’s`,
     ),
-    tiers: [{ threshold: 1, title: 'Stehaufmännchen', icon: '🌱' }],
+    tiers: [
+      { threshold: 1, title: 'Stehaufmännchen', icon: '🌱' },
+      { threshold: 10, title: 'Dickes Fell', icon: '🛡️' },
+      { threshold: 25, title: 'Unerschütterlich', icon: '🪨' },
+      { threshold: 50, title: 'Phönix aus der Asche', icon: '🌅' },
+      { threshold: 100, title: 'Die Ruhe selbst', icon: '🧘' },
+      { threshold: 150, title: 'Lernkurve', icon: '📚' },
+      { threshold: 200, title: 'Eiserner Wille', icon: '⚔️' },
+      { threshold: 1000, title: 'Unaufhaltsam', icon: '🌋' },
+    ],
   },
   {
     category: 'streak',
