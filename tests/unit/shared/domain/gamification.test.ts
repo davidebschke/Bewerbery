@@ -4,6 +4,7 @@ import { makeApplication } from '../../../../src/shared/testing/fixtures'
 import {
   MAX_LEVEL,
   awardXp,
+  getBadgeGroups,
   getBadges,
   getLevel,
   getLevelInfo,
@@ -177,16 +178,51 @@ describe('getBadges', () => {
     )
     const unlocked = badges.filter((b) => b.unlocked).map((b) => b.id)
     expect(unlocked).toEqual([
-      'first-application',
-      'ten-applications',
-      'first-follow-up',
-      'first-interview',
+      'applications-1',
+      'applications-10',
+      'followUps-1',
+      'interviews-1',
       'streak-3',
     ])
-    expect(badges[0]).not.toHaveProperty('check')
+    expect(badges[0]).not.toHaveProperty('metric')
   })
 
   it('has everything locked initially', () => {
     expect(getBadges(empty, today).every((b) => !b.unlocked)).toBe(true)
+  })
+
+  it('reports progress capped at the target', () => {
+    const badges = getBadges({ ...empty, applicationsCreated: 17 }, today)
+    const byId = (id: string) => badges.find((b) => b.id === id)
+    expect(byId('applications-10')).toMatchObject({ current: 10, target: 10, unlocked: true })
+    expect(byId('applications-25')).toMatchObject({ current: 17, target: 25, unlocked: false })
+  })
+
+  it('describes thresholds in German', () => {
+    const badges = getBadges(empty, today)
+    const description = (id: string) => badges.find((b) => b.id === id)?.description
+    expect(description('applications-1')).toBe('Erste Bewerbung angelegt')
+    expect(description('applications-10')).toBe('10 Bewerbungen angelegt')
+    expect(description('followUps-1')).toBe('Zum ersten Mal nachgefasst')
+    expect(description('interviews-1')).toBe('Ersten Termin erhalten')
+    expect(description('offers-1')).toBe('Erstes Angebot erhalten')
+    expect(description('rejections-1')).toBe('Absage weggesteckt – weiter geht’s')
+    expect(description('streak-3')).toBe('3 Wochen in Folge aktiv')
+  })
+})
+
+describe('getBadgeGroups', () => {
+  it('groups badges by category in a fixed order', () => {
+    const groups = getBadgeGroups({ ...empty, applicationsCreated: 1 }, today)
+    expect(groups.map((g) => g.title)).toEqual([
+      'Bewerbungen',
+      'Nachfragen',
+      'Termine',
+      'Angebote',
+      'Absagen',
+      'Serien',
+    ])
+    expect(groups[0].unlockedCount).toBe(1)
+    expect(groups.every((g) => g.badges.every((b) => b.category === g.category))).toBe(true)
   })
 })
