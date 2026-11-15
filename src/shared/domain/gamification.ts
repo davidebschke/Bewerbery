@@ -289,7 +289,13 @@ const CATEGORIES: CategoryDefinition[] = [
     title: 'Serien',
     metric: (_p, streak) => streak,
     describe: (threshold) => `${formatNumber(threshold)} Wochen in Folge aktiv`,
-    tiers: [{ threshold: 3, title: 'In Serie', icon: '🔥' }],
+    tiers: [
+      { threshold: 3, title: 'In Serie', icon: '🔥' },
+      { threshold: 5, title: 'Im Rhythmus', icon: '🥁' },
+      { threshold: 10, title: 'Durchhalter', icon: '⏳' },
+      { threshold: 26, title: 'Halbjahres-Held', icon: '🗓️' },
+      { threshold: 52, title: 'Ein Jahr am Ball', icon: '🎯' },
+    ],
   },
 ]
 

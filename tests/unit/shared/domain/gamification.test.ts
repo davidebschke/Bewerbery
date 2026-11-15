@@ -340,3 +340,23 @@ describe('offer badges', () => {
     })
   })
 })
+
+describe('streak badges', () => {
+  it('has tiers for 3, 5, 10, 26 and 52 weeks', () => {
+    expect(categoryBadges('streak').map((b) => b.target)).toEqual([3, 5, 10, 26, 52])
+  })
+
+  it('unlocks tiers up to the current streak', () => {
+    const activeWeeks = ['2026-W35', '2026-W36', '2026-W37', '2026-W38', '2026-W39']
+    const badges = categoryBadges('streak', { activeWeeks })
+    expect(badges.filter((b) => b.unlocked).map((b) => b.title)).toEqual([
+      'In Serie',
+      'Im Rhythmus',
+    ])
+    expect(badges.at(-1)).toMatchObject({
+      title: 'Ein Jahr am Ball',
+      description: '52 Wochen in Folge aktiv',
+      current: 5,
+    })
+  })
+})
