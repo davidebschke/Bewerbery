@@ -258,3 +258,25 @@ describe('application badges', () => {
     })
   })
 })
+
+describe('follow-up badges', () => {
+  it('has tiers from 1 to 1000 follow-ups', () => {
+    expect(categoryBadges('followUps').map((b) => b.target)).toEqual([
+      1, 10, 25, 50, 100, 150, 200, 1000,
+    ])
+  })
+
+  it('unlocks tiers up to the current count', () => {
+    const badges = categoryBadges('followUps', { followUps: 25 })
+    expect(badges.filter((b) => b.unlocked).map((b) => b.title)).toEqual([
+      'Dranbleiber',
+      'Hartnäckig',
+      'Telefonjoker',
+    ])
+    expect(badges.at(-1)).toMatchObject({
+      title: 'Meister der Nachfrage',
+      description: '1.000-mal nachgefasst',
+      current: 25,
+    })
+  })
+})

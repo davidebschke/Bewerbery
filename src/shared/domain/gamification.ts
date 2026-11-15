@@ -228,7 +228,13 @@ const CATEGORIES: CategoryDefinition[] = [
     describe: counted('Zum ersten Mal nachgefasst', (n) => `${n}-mal nachgefasst`),
     tiers: [
       { threshold: 1, title: 'Dranbleiber', icon: '📞' },
-      { threshold: 5, title: 'Hartnäckig', icon: '💪' },
+      { threshold: 10, title: 'Hartnäckig', icon: '💪' },
+      { threshold: 25, title: 'Telefonjoker', icon: '☎️' },
+      { threshold: 50, title: 'Erinnerungskünstler', icon: '🔔' },
+      { threshold: 100, title: 'Unüberhörbar', icon: '📣' },
+      { threshold: 150, title: 'Dauerbrenner', icon: '🔁' },
+      { threshold: 200, title: 'Nicht zu bremsen', icon: '🚂' },
+      { threshold: 1000, title: 'Meister der Nachfrage', icon: '🧭' },
     ],
   },
   {
