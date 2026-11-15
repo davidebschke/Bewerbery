@@ -214,6 +214,11 @@ const CATEGORIES: CategoryDefinition[] = [
       { threshold: 1, title: 'Erster Schritt', icon: '🚀' },
       { threshold: 10, title: 'Fleißig', icon: '📬' },
       { threshold: 25, title: 'Marathon', icon: '🏃' },
+      { threshold: 50, title: 'Durchstarter', icon: '📈' },
+      { threshold: 100, title: 'Hundertschaft', icon: '💯' },
+      { threshold: 150, title: 'Unermüdlich', icon: '⚙️' },
+      { threshold: 200, title: 'Bewerbungsmaschine', icon: '🤖' },
+      { threshold: 1000, title: 'Tausendsassa', icon: '👑' },
     ],
   },
   {

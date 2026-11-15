@@ -4,6 +4,7 @@ import { makeApplication } from '../../../../src/shared/testing/fixtures'
 import {
   MAX_LEVEL,
   awardXp,
+  type BadgeCategory,
   getBadgeGroups,
   getBadges,
   getLevel,
@@ -224,5 +225,36 @@ describe('getBadgeGroups', () => {
     ])
     expect(groups[0].unlockedCount).toBe(1)
     expect(groups.every((g) => g.badges.every((b) => b.category === g.category))).toBe(true)
+  })
+})
+
+/** Abzeichen einer Kategorie für einen Fortschritts-Stand */
+function categoryBadges(category: BadgeCategory, progress: Partial<typeof empty> = {}) {
+  return getBadges({ ...empty, ...progress }, today).filter((b) => b.category === category)
+}
+
+describe('application badges', () => {
+  it('has tiers from 1 to 1000 applications', () => {
+    expect(categoryBadges('applications').map((b) => b.target)).toEqual([
+      1, 10, 25, 50, 100, 150, 200, 1000,
+    ])
+  })
+
+  it('unlocks tiers up to the current count', () => {
+    const badges = categoryBadges('applications', { applicationsCreated: 150 })
+    expect(badges.filter((b) => b.unlocked).map((b) => b.title)).toEqual([
+      'Erster Schritt',
+      'Fleißig',
+      'Marathon',
+      'Durchstarter',
+      'Hundertschaft',
+      'Unermüdlich',
+    ])
+    expect(badges.at(-1)).toMatchObject({
+      title: 'Tausendsassa',
+      description: '1.000 Bewerbungen angelegt',
+      current: 150,
+      unlocked: false,
+    })
   })
 })
