@@ -47,6 +47,16 @@ describe('App', () => {
     expect(api.saveData).toHaveBeenCalled()
   })
 
+  it('opens the import from the empty state and the header', async () => {
+    renderWith()
+    await userEvent.click(await screen.findByRole('button', { name: /Aus Tabelle importieren/ }))
+    expect(screen.getByRole('dialog', { name: 'Bewerbungen importieren' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Abbrechen' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Bewerbungen importieren' }))
+    expect(screen.getByRole('dialog', { name: 'Bewerbungen importieren' })).toBeInTheDocument()
+  })
+
   it('pins due applications above the others', async () => {
     renderWith(
       makeData({

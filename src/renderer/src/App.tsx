@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Settings as SettingsIcon, Target } from 'lucide-react'
+import { FileUp, Plus, Settings as SettingsIcon, Target } from 'lucide-react'
 import { arrangeApplications, type StageFilter } from '@shared/domain/sorting'
 import type { Application } from '@shared/types'
 import { Button } from './components/ui/Button'
@@ -14,6 +14,7 @@ import { BadgesDialog } from './features/gamification/BadgesDialog'
 import { celebrate } from './features/gamification/celebrate'
 import { StatsBar } from './features/gamification/StatsBar'
 import { XpBar } from './features/gamification/XpBar'
+import { ImportDialog } from './features/import/ImportDialog'
 import { SettingsDialog } from './features/settings/SettingsDialog'
 import { useTheme } from './hooks/useTheme'
 import { useToday } from './hooks/useToday'
@@ -30,6 +31,7 @@ export function App() {
   const [form, setForm] = useState<FormTarget>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [badgesOpen, setBadgesOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [exporting, setExporting] = useState(false)
@@ -135,6 +137,15 @@ export function App() {
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Bewerbungen importieren"
+              title="Bewerbungen importieren"
+              onClick={() => setImportOpen(true)}
+            >
+              <FileUp size={18} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               aria-label="Einstellungen"
               onClick={() => setSettingsOpen(true)}
             >
@@ -158,9 +169,14 @@ export function App() {
               Lege deine erste Bewerbung an und sammle XP. Bewerbery erinnert dich, wann du dich
               melden solltest.
             </p>
-            <Button variant="primary" onClick={() => setForm({ mode: 'create' })}>
-              <Plus size={16} aria-hidden="true" /> Erste Bewerbung anlegen
-            </Button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button variant="primary" onClick={() => setForm({ mode: 'create' })}>
+                <Plus size={16} aria-hidden="true" /> Erste Bewerbung anlegen
+              </Button>
+              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                <FileUp size={16} aria-hidden="true" /> Aus Tabelle importieren
+              </Button>
+            </div>
           </EmptyState>
         ) : (
           <>
@@ -223,6 +239,7 @@ export function App() {
           onClose={() => setForm(null)}
         />
       )}
+      {importOpen && <ImportDialog onClose={() => setImportOpen(false)} />}
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <BadgesDialog
         open={badgesOpen}

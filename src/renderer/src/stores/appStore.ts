@@ -1,7 +1,14 @@
 import { create } from 'zustand'
 import { toIsoDate } from '@shared/domain/dates'
 import { createApplication, createEmptyData } from '@shared/domain/factory'
-import { awardXp, newlyUnlockedBadges, stageEvent, type XpEvent } from '@shared/domain/gamification'
+import {
+  awardImport,
+  awardXp,
+  newlyUnlockedBadges,
+  stageEvent,
+  type AwardResult,
+  type XpEvent,
+} from '@shared/domain/gamification'
 import { applicationInputSchema, settingsSchema } from '@shared/schemas'
 import type {
   AppData,
@@ -28,6 +35,12 @@ export interface Celebration {
   kind: CelebrationKind
 }
 
+/** Zeilen, die beim Import nicht übernommen wurden */
+export interface ImportSummary {
+  skipped: number
+  duplicates: number
+}
+
 export interface AppState {
   status: 'loading' | 'ready' | 'error'
   error: string | null
@@ -42,6 +55,8 @@ export interface AppState {
     documents?: ApplicationDocument[],
   ): Application
   updateApplication(id: string, input: ApplicationInput, documents?: ApplicationDocument[]): void
+  /** Übernimmt importierte Bewerbungen in einem Speichervorgang mit einer Sammelmeldung */
+  importApplications(applications: Application[], summary: ImportSummary): void
   deleteApplication(id: string): Promise<void>
   markFollowedUp(id: string): void
   setStage(id: string, stage: Stage, appointmentAt?: string | null): void
@@ -82,6 +97,11 @@ export const useAppStore = create<AppState>()((set, get) => {
     const today = new Date()
     const result = awardXp(data.progress, event, today)
     get().pushToast('xp', `+${result.gained} XP · ${XP_MESSAGES[event]}`)
+    return celebrateResult(data, result, today)
+  }
+
+  /** Zeigt neue Abzeichen und Level-Up für ein XP-Ergebnis und übernimmt den Fortschritt */
+  function celebrateResult(data: AppData, result: AwardResult, today: Date): AppData {
     for (const badge of newlyUnlockedBadges(data.progress, result.progress, today)) {
       get().pushToast('badge', `Abzeichen freigeschaltet: ${badge.icon} ${badge.title}`)
     }
@@ -104,6 +124,21 @@ export const useAppStore = create<AppState>()((set, get) => {
 
   return {
     ...initialState,
+
+    importApplications(applications, { skipped, duplicates }) {
+      const today = new Date()
+      const { data } = get()
+      const result = awardImport(data.progress, applications, today)
+      const parts = [
+        `${applications.length} ${applications.length === 1 ? 'Bewerbung' : 'Bewerbungen'} importiert`,
+        `${skipped} übersprungen`,
+        `${duplicates} ${duplicates === 1 ? 'Duplikat' : 'Duplikate'}`,
+      ]
+      if (result.gained) parts.push(`+${result.gained} XP`)
+      get().pushToast(applications.length ? 'xp' : 'info', parts.join(' · '))
+      const next = { ...data, applications: [...data.applications, ...applications] }
+      persist(celebrateResult(next, result, today))
+    },
 
     async hydrate() {
       set({ status: 'loading', error: null })

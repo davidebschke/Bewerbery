@@ -2,7 +2,14 @@ import { MAX_FOLLOW_UP_WEEKS, MIN_FOLLOW_UP_WEEKS, STAGE_LABELS } from '../../co
 import type { Application, Stage } from '../../types'
 import { createApplication } from '../factory'
 import { columnLabel, type ColumnTarget } from './fields'
-import { normalizeKey, parseDate, parseEmail, parseStage, parseWeeks, type DateOrder } from './values'
+import {
+  normalizeKey,
+  parseDate,
+  parseEmail,
+  parseStage,
+  parseWeeks,
+  type DateOrder,
+} from './values'
 
 /** Uhrzeit für Termine ohne Zeitangabe */
 export const DEFAULT_APPOINTMENT_TIME = '09:00'

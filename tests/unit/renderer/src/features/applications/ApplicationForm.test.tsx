@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeApplication } from '@shared/testing/fixtures'
 import { useAppStore } from '../../../../../../src/renderer/src/stores/appStore'
-import { installMockApi, makeDocument, type MockApi } from '../../../../../../src/renderer/src/test/mockApi'
+import {
+  installMockApi,
+  makeDocument,
+  type MockApi,
+} from '../../../../../../src/renderer/src/test/mockApi'
 import { freezeToday, seedStore } from '../../../../../../src/renderer/src/test/utils'
 import { ApplicationForm } from '../../../../../../src/renderer/src/features/applications/ApplicationForm'
 
