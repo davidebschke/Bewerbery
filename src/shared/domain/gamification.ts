@@ -258,7 +258,12 @@ const CATEGORIES: CategoryDefinition[] = [
     title: 'Angebote',
     metric: (p) => p.offers,
     describe: counted('Erstes Angebot erhalten', (n) => `${n} Angebote erhalten`),
-    tiers: [{ threshold: 1, title: 'Volltreffer', icon: '🏆' }],
+    tiers: [
+      { threshold: 1, title: 'Volltreffer', icon: '🏆' },
+      { threshold: 3, title: 'Begehrt', icon: '💎' },
+      { threshold: 5, title: 'Qual der Wahl', icon: '🤝' },
+      { threshold: 10, title: 'Headhunter-Liebling', icon: '🧲' },
+    ],
   },
   {
     category: 'rejections',

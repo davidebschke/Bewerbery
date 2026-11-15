@@ -324,3 +324,19 @@ describe('rejection badges', () => {
     })
   })
 })
+
+describe('offer badges', () => {
+  it('has tiers for 1, 3, 5 and 10 offers', () => {
+    expect(categoryBadges('offers').map((b) => b.target)).toEqual([1, 3, 5, 10])
+  })
+
+  it('unlocks tiers up to the current count', () => {
+    const badges = categoryBadges('offers', { offers: 3 })
+    expect(badges.filter((b) => b.unlocked).map((b) => b.title)).toEqual(['Volltreffer', 'Begehrt'])
+    expect(badges[2]).toMatchObject({
+      title: 'Qual der Wahl',
+      description: '5 Angebote erhalten',
+      current: 3,
+    })
+  })
+})
