@@ -23,6 +23,7 @@
     "dist:linux": "electron-vite build && electron-builder --linux",
     "dist:linux:docker": "electron-vite build && node scripts/dist-linux-docker.mjs",
     "test:e2e:linux": "node scripts/e2e-linux-docker.mjs",
+    "deps:overrides": "node scripts/check-overrides.mjs",
     "prepare": "husky"
   },
   "dependencies": {
