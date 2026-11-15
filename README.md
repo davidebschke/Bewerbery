@@ -12,6 +12,7 @@ Desktop app for managing your job applications – professional, yet playful.
   - [Projekt in VS Code auschecken und starten](#vscode-start-de)
   - [Ausführbare Dateien bauen](#build-de)
   - [Tests ausführen](#tests-de)
+  - [Abhängigkeiten aktualisieren](#deps-de)
   - [CI/CD](#cicd-de)
   - [Spec-Driven Development](#spec-driven-de)
   - [Lizenz](#lizenz-de)
@@ -22,6 +23,7 @@ Desktop app for managing your job applications – professional, yet playful.
   - [Checking Out and Starting the Project in VS Code](#vscode-start-en)
   - [Building Executables](#build-en)
   - [Running the Tests](#tests-en)
+  - [Updating Dependencies](#deps-en)
   - [CI/CD](#cicd-en)
   - [Spec-Driven Development](#spec-driven-en)
   - [License](#license-en)
@@ -88,6 +90,7 @@ src/
 tests/
 ├── unit/        Unit- & Komponententests (spiegelt die Struktur von src/)
 └── e2e/         Playwright-Tests
+scripts/         Build- & Wartungsskripte (Linux-Builds per Docker, Override-Prüfung)
 specs/           Spec-Kit-Spezifikationen (spec, plan, tasks)
 .specify/        Spec-Kit (Constitution, Vorlagen, Skripte)
 .claude/         Claude-Code-Regeln, Einstellungen und Spec-Kit-Skills
@@ -164,6 +167,32 @@ Die E2E-Tests lassen sich auch gegen die gepackte App ausführen:
 ```powershell
 $env:BEWERBERY_EXE = "$PWD\release\1.0.0\win-unpacked\Bewerbery.exe"; npx playwright test
 ```
+
+<a id="deps-de"></a>
+
+### Abhängigkeiten aktualisieren
+
+```bash
+npm outdated              # veraltete Pakete anzeigen
+npm audit                 # bekannte Sicherheitslücken anzeigen
+npm run deps:overrides    # prüfen, ob die Overrides in package.json noch gebraucht werden
+```
+
+Updates werden pro Paket einzeln installiert (`npm install <paket>@<version>`) und als eigener
+Commit `chore(deps): bump <paket> from X to Y` festgehalten. Pakete, die exakt dieselbe Version
+verlangen (`react`/`react-dom`, `vitest`/`@vitest/coverage-v8`), werden gemeinsam aktualisiert.
+
+**Overrides:** Unter `overrides` in der `package.json` werden anfällige Versionen indirekter
+Abhängigkeiten ersetzt, für die es upstream noch keinen Fix gibt. Aktuell:
+
+| Override | Grund |
+|---|---|
+| `minimatch@>=7.0.0 <11.0.1` → `^11.0.8` | [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) (DoS); betrifft nur Build/Lint über `electron-builder` und `typescript-eslint` |
+
+Der Override greift nur auf die anfälligen Versionen, ältere Hauptversionen (3.x, 5.x) bleiben
+unberührt. Durch den Caret-Bereich werden neue 11.x-Versionen weiterhin mit `npm update` geholt.
+Meldet `npm run deps:overrides` „kann aus package.json entfernt werden“, den Eintrag löschen und
+anschließend `npm install`, `npm audit` und `npm run test:all` ausführen.
 
 <a id="cicd-de"></a>
 
@@ -254,6 +283,7 @@ src/
 tests/
 ├── unit/        Unit & component tests (mirrors the src/ structure)
 └── e2e/         Playwright tests
+scripts/         build & maintenance scripts (Linux builds via Docker, override check)
 specs/           Spec-Kit specifications (spec, plan, tasks)
 .specify/        Spec-Kit (constitution, templates, scripts)
 .claude/         Claude Code rules, settings and Spec-Kit skills
@@ -330,6 +360,32 @@ The E2E tests can also be run against the packaged app:
 ```powershell
 $env:BEWERBERY_EXE = "$PWD\release\1.0.0\win-unpacked\Bewerbery.exe"; npx playwright test
 ```
+
+<a id="deps-en"></a>
+
+### Updating Dependencies
+
+```bash
+npm outdated              # list outdated packages
+npm audit                 # list known vulnerabilities
+npm run deps:overrides    # check whether the overrides in package.json are still needed
+```
+
+Updates are installed one package at a time (`npm install <package>@<version>`) and recorded as a
+separate commit `chore(deps): bump <package> from X to Y`. Packages that require the exact same
+version (`react`/`react-dom`, `vitest`/`@vitest/coverage-v8`) are updated together.
+
+**Overrides:** The `overrides` section in `package.json` replaces vulnerable versions of transitive
+dependencies for which no upstream fix exists yet. Currently:
+
+| Override | Reason |
+|---|---|
+| `minimatch@>=7.0.0 <11.0.1` → `^11.0.8` | [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) (DoS); only affects build/lint via `electron-builder` and `typescript-eslint` |
+
+The override only applies to the vulnerable versions; older major versions (3.x, 5.x) are left
+untouched. Thanks to the caret range, new 11.x releases are still picked up by `npm update`.
+Once `npm run deps:overrides` reports "kann aus package.json entfernt werden" (can be removed),
+delete the entry and run `npm install`, `npm audit` and `npm run test:all`.
 
 <a id="cicd-en"></a>
 
