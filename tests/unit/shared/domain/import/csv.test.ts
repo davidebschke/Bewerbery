@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { decodeText, detectDelimiter, parseCsv } from '@shared/domain/import/csv'
+import { decodeText, detectDelimiter, parseCsv, toCsv } from '@shared/domain/import/csv'
 
 describe('decodeText', () => {
   it('decodes UTF-8 with and without BOM', () => {
@@ -36,7 +36,7 @@ describe('detectDelimiter', () => {
 
 describe('parseCsv', () => {
   it('parses quoted fields with delimiters, quotes and line breaks', () => {
-    const text = '﻿Firma;Notiz\r\n"ACME; Inc.";"Sagte ""Hallo""\nzweite Zeile"\r\nB;\n'
+    const text = '\uFEFFFirma;Notiz\r\n"ACME; Inc.";"Sagte ""Hallo""\nzweite Zeile"\r\nB;\n'
     expect(parseCsv(text)).toEqual([
       ['Firma', 'Notiz'],
       ['ACME; Inc.', 'Sagte "Hallo"\nzweite Zeile'],
@@ -58,5 +58,19 @@ describe('parseCsv', () => {
 
   it('returns no rows for empty input', () => {
     expect(parseCsv('')).toEqual([])
+  })
+})
+
+describe('toCsv', () => {
+  it('quotes fields that need it and round-trips through parseCsv', () => {
+    const rows = [
+      ['Firma', 'Notiz'],
+      ['A; B', 'Sagte "Hallo"\nZeile 2'],
+      ['C', ''],
+    ]
+    const text = toCsv(rows)
+    expect(text).toBe('Firma;Notiz\r\n"A; B";"Sagte ""Hallo""\nZeile 2"\r\nC;')
+    expect(parseCsv(text)).toEqual(rows)
+    expect(toCsv([['a,b']], ',')).toBe('"a,b"')
   })
 })

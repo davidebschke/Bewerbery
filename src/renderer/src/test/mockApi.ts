@@ -27,6 +27,8 @@ export function installMockApi(data: AppData = createEmptyData()): MockApi {
     removeDocument: vi.fn(async () => undefined),
     removeAllDocuments: vi.fn(async () => undefined),
     exportApplicationsPdf: vi.fn(async () => ({ canceled: false, filePath: 'C:/export.pdf' })),
+    pickImportFile: vi.fn(async () => null),
+    saveImportTemplate: vi.fn(async () => ({ canceled: false, filePath: 'C:/vorlage.xlsx' })),
     getPathForFile: vi.fn((file: File) => `C:/drop/${file.name}`),
   } as unknown as MockApi
   window.api = api

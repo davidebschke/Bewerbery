@@ -1,0 +1,21 @@
+# Testdateien für den Tabellen-Import
+
+Beispieldateien für die Problemfälle aus Issue #6. Sie werden in den Unit-Tests
+(`tests/unit/main/import/`) und im E2E-Test verwendet und eignen sich zum manuellen Ausprobieren
+über **Bewerbungen importieren** in der App.
+
+Neu erzeugen: `node scripts/generate-import-samples.mjs` (braucht LibreOffice; die `.ods`/`.xlsx`
+werden mit LibreOffice headless erzeugt, damit es echte Dateien eines Tabellenprogramms sind).
+
+| Datei                           | Problemfall                                                                                                                                                                                               | Erwartetes Ergebnis                                                                                                                                              |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `01-sauber.csv`                 | UTF-8 mit BOM, `;`, alle Spalten wie in der Vorlage, Umlaute, Notiz mit Zeilenumbruch und `"`                                                                                                             | 5 Bewerbungen, keine Warnungen, alle Felder gefüllt (Status Beworben/Termin/Absage/Angebot, Termin mit Uhrzeit)                                                  |
+| `02-unsortiert.ods` / `.xlsx`   | Titel (verbundene Zellen) und Leerzeile über der Kopfzeile, Spalten vertauscht, Leerzeilen zwischendrin, Summenzeile am Ende, Datumswerte als echte Datumszellen, zweites Blatt „Archiv 2025“             | Kopfzeile = Zeile 4, 5 Bewerbungen ohne Warnungen; Blattauswahl zeigt 2 Blätter (Archiv: 2 Absagen)                                                              |
+| `03-englisch.xlsx` / `.ods`     | Englische Spaltennamen und Statuswerte (Applied, Interview scheduled, Rejected, Offer, Pending), US-Datum `10/23/2026`, „September 29, 2026“, `mailto:` und `Name <mail>`, Termin als Datum+Uhrzeit-Zelle | Alle Spalten automatisch zugeordnet, Datumsformat Monat/Tag erkannt, 5 Bewerbungen ohne Warnungen                                                                |
+| `04-unbekannte-felder.csv`      | Windows-1252, Komma als Trennzeichen, unbekannte Spalten (Gehaltsvorstellung, Quelle, Bewerbungsweg), unbekannter Status, ungültige E-Mail, Frist „20“ und „bald“                                         | Unbekannte Spalten landen als „Spalte: Wert“ in den Notizen; Zeile 3 mit 3 Warnungen, Zeile 4 mit 1 Warnung; Originalwerte bleiben in den Notizen                |
+| `05-fehlende-pflichtwerte.xlsx` | Fehlendes Unternehmen, fehlende Position, fehlendes und ungültiges Datum (`31.02.2026`), Duplikat innerhalb der Datei, Duplikat zu `01-sauber.csv`                                                        | 4 Zeilen mit Fehler (nicht importierbar, aber in der Vorschau korrigierbar bzw. Ersatzdatum), Zeile 7 als Duplikat; nach Import von `01-sauber.csv` auch Zeile 8 |
+| `06-ohne-kopfzeile.csv`         | Keine Kopfzeile, Tabulator als Trennzeichen                                                                                                                                                               | E-Mail, Datum, Telefon und Status werden am Inhalt erkannt; Unternehmen und Position müssen manuell zugeordnet werden (sonst in Notizen)                         |
+| `07-mehrdeutige-daten.csv`      | Nur Datumswerte wie `03/04/2026`                                                                                                                                                                          | Hinweis „Datumsformat nicht eindeutig“ mit Auswahl Tag/Monat oder Monat/Tag                                                                                      |
+
+Die Import-Vorlage selbst (`.xlsx`, `.ods`, `.csv`) lässt sich in der App herunterladen und muss
+unverändert ohne Warnungen importierbar sein.

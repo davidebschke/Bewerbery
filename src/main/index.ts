@@ -1,8 +1,10 @@
 import { join } from 'node:path'
 import { BrowserWindow, Notification, app, dialog, ipcMain, shell } from 'electron'
 import { DOCUMENTS_DIR_NAME } from '@shared/constants'
+import { TEMPLATE_FORMAT_LABELS } from '@shared/domain/import/template'
 import type { AppData } from '@shared/types'
 import { createDocumentService } from './documents/documentService'
+import { createImportService, IMPORT_EXTENSIONS } from './import/importService'
 import { registerIpc } from './ipc/registerIpc'
 import { createReminderService } from './notifications/reminderService'
 import { createPdfExportService } from './pdf/pdfExportService'
@@ -58,6 +60,24 @@ app.whenReady().then(() => {
         filters: [{ name: 'PDF-Dateien', extensions: ['pdf'] }],
       })
       return result.canceled || !result.filePath ? null : result.filePath
+    }),
+    importer: createImportService({
+      pickFile: async () => {
+        const result = await dialog.showOpenDialog({
+          title: 'Bewerbungen importieren',
+          properties: ['openFile'],
+          filters: [{ name: 'Tabellen (CSV, ODS, XLSX)', extensions: [...IMPORT_EXTENSIONS] }],
+        })
+        return result.canceled ? null : (result.filePaths[0] ?? null)
+      },
+      saveFile: async (suggestedName, format) => {
+        const result = await dialog.showSaveDialog({
+          title: 'Importvorlage speichern',
+          defaultPath: suggestedName,
+          filters: [{ name: TEMPLATE_FORMAT_LABELS[format], extensions: [format] }],
+        })
+        return result.canceled || !result.filePath ? null : result.filePath
+      },
     }),
     pickFiles: async () => {
       const result = await dialog.showOpenDialog({

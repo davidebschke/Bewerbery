@@ -57,7 +57,7 @@ export function detectDelimiter(text: string): CsvDelimiter {
  * Zeilenumbrüche und verdoppelte Anführungszeichen enthalten.
  */
 export function parseCsv(input: string, delimiter: string = detectDelimiter(input)): string[][] {
-  const text = input.startsWith('﻿') ? input.slice(1) : input
+  const text = input.startsWith('\uFEFF') ? input.slice(1) : input
   const rows: string[][] = []
   let row: string[] = []
   let field = ''
@@ -100,4 +100,22 @@ export function parseCsv(input: string, delimiter: string = detectDelimiter(inpu
   }
   if (field !== '' || row.length > 0) endRow()
   return rows
+}
+
+/**
+ * Erzeugt CSV-Text (Semikolon wie bei deutschem Excel/LibreOffice, Windows-Zeilenumbrüche);
+ * Felder mit Trennzeichen, Anführungszeichen oder Umbrüchen werden in Anführungszeichen gesetzt.
+ */
+export function toCsv(rows: string[][], delimiter: string = ';'): string {
+  return rows
+    .map((row) =>
+      row
+        .map((value) =>
+          value.includes(delimiter) || /["\r\n]/.test(value)
+            ? `"${value.replace(/"/g, '""')}"`
+            : value,
+        )
+        .join(delimiter),
+    )
+    .join('\r\n')
 }

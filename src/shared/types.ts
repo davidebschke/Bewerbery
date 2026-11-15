@@ -32,3 +32,15 @@ export interface FollowUpInfo {
   dueDate: string
   weeks: number
 }
+
+/** Ein Tabellenblatt aus einer importierten Datei – alle Zellen als Text */
+export interface ImportSheet {
+  name: string
+  rows: string[][]
+}
+
+/** Inhalt einer importierten Tabellendatei */
+export interface ImportWorkbook {
+  fileName: string
+  sheets: ImportSheet[]
+}
