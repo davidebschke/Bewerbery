@@ -69,14 +69,22 @@ export const appDataSchema = z.object({
   progress: progressSchema.default(progressSchema.parse({})),
 })
 
-/** Eingabe aus dem Formular (ohne Systemfelder) */
-export const applicationInputSchema = applicationSchema.pick({
-  company: true,
-  position: true,
-  contactName: true,
-  contactPhone: true,
-  contactEmail: true,
-  sentAt: true,
-  followUpWeeks: true,
-  notes: true,
-})
+/**
+ * Eingabe aus dem Formular und dem Import (ohne Systemfelder).
+ * Die Position ist hier Pflicht; gespeicherte Altdaten ohne Position bleiben über
+ * `applicationSchema` weiterhin ladbar.
+ */
+export const applicationInputSchema = applicationSchema
+  .pick({
+    company: true,
+    position: true,
+    contactName: true,
+    contactPhone: true,
+    contactEmail: true,
+    sentAt: true,
+    followUpWeeks: true,
+    notes: true,
+  })
+  .extend({
+    position: z.string().trim().min(1, 'Position ist erforderlich'),
+  })

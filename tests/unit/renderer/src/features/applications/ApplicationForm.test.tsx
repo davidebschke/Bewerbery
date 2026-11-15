@@ -28,6 +28,7 @@ describe('ApplicationForm', () => {
     await userEvent.type(screen.getByLabelText('E-Mail'), 'falsch')
     await userEvent.click(screen.getByRole('button', { name: 'Bewerbung anlegen (+10 XP)' }))
     expect(screen.getByText('Unternehmen ist erforderlich')).toBeInTheDocument()
+    expect(screen.getByText('Position ist erforderlich')).toBeInTheDocument()
     expect(screen.getByText('Ungültige E-Mail-Adresse')).toBeInTheDocument()
     expect(state().data.applications).toHaveLength(0)
   })
@@ -39,7 +40,7 @@ describe('ApplicationForm', () => {
     expect(screen.getByRole('option', { name: 'Standard (2 Wochen)' })).toBeInTheDocument()
 
     await userEvent.type(screen.getByLabelText('Unternehmen *'), 'Neu GmbH')
-    await userEvent.type(screen.getByLabelText('Position'), 'Designer')
+    await userEvent.type(screen.getByLabelText('Position *'), 'Designer')
     await userEvent.type(screen.getByLabelText('Ansprechpartner'), 'Herr Blau')
     await userEvent.type(screen.getByLabelText('Telefon'), '0301234')
     await userEvent.type(screen.getByLabelText('E-Mail'), 'blau@neu.de')
@@ -69,7 +70,12 @@ describe('ApplicationForm', () => {
 
   it('edits an existing application and removes documents on save', async () => {
     const doc = makeDocument('alt.pdf')
-    const app = makeApplication({ company: 'Alt', followUpWeeks: 4, documents: [doc] })
+    const app = makeApplication({
+      company: 'Alt',
+      position: 'Dev',
+      followUpWeeks: 4,
+      documents: [doc],
+    })
     seedStore({ applications: [app] })
     renderForm(app)
 
@@ -83,6 +89,19 @@ describe('ApplicationForm', () => {
 
     expect(state().data.applications[0]).toMatchObject({ company: 'Neu', documents: [] })
     expect(api.removeDocument).toHaveBeenCalledWith(app.id, doc)
+  })
+
+  it('requires the position when editing a legacy application without one', async () => {
+    const app = makeApplication({ company: 'Alt', position: '' })
+    seedStore({ applications: [app] })
+    renderForm(app)
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }))
+    expect(screen.getByText('Position ist erforderlich')).toBeInTheDocument()
+    expect(state().data.applications[0].position).toBe('')
+
+    await userEvent.type(screen.getByLabelText('Position *'), 'Nachgetragen')
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }))
+    expect(state().data.applications[0].position).toBe('Nachgetragen')
   })
 
   it('adds documents via picker and drag & drop', async () => {
@@ -99,6 +118,7 @@ describe('ApplicationForm', () => {
     expect(api.importDocuments).toHaveBeenCalledWith(expect.any(String), ['C:/drop/Zeugnis.pdf'])
 
     await userEvent.type(screen.getByLabelText('Unternehmen *'), 'Docs AG')
+    await userEvent.type(screen.getByLabelText('Position *'), 'Dev')
     await userEvent.click(screen.getByRole('button', { name: 'Bewerbung anlegen (+10 XP)' }))
     expect(state().data.applications[0].documents.map((d) => d.name)).toEqual([
       'Lebenslauf.pdf',

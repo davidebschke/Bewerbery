@@ -40,6 +40,7 @@ describe('App', () => {
     renderWith()
     await userEvent.click(await screen.findByRole('button', { name: /Erste Bewerbung anlegen/ }))
     await userEvent.type(screen.getByLabelText('Unternehmen *'), 'Start AG')
+    await userEvent.type(screen.getByLabelText('Position *'), 'Entwickler:in')
     await userEvent.click(screen.getByRole('button', { name: 'Bewerbung anlegen (+10 XP)' }))
     expect(screen.getByRole('article', { name: 'Bewerbung bei Start AG' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Deine Bewerbungen' })).toBeInTheDocument()

@@ -8,7 +8,7 @@ import {
 import { useAppStore } from '../../../../../src/renderer/src/stores/appStore'
 
 const store = () => useAppStore.getState()
-const input = { company: 'ACME', sentAt: '2026-09-20' }
+const input = { company: 'ACME', position: 'Dev', sentAt: '2026-09-20' }
 
 let api: MockApi
 

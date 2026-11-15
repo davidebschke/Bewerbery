@@ -121,9 +121,10 @@ export function ApplicationForm({ application, onClose }: ApplicationFormProps) 
           placeholder="z. B. Muster GmbH"
         />
         <TextField
-          label="Position"
+          label="Position *"
           value={values.position}
           onChange={set('position')}
+          error={errors.position}
           placeholder="z. B. Frontend-Entwickler:in"
         />
         <TextField

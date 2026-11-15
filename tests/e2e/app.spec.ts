@@ -83,6 +83,7 @@ test('creates an application and keeps it after restart', async () => {
 
   await page.getByRole('button', { name: 'Erste Bewerbung anlegen' }).click()
   await page.getByLabel('Unternehmen *').fill('Muster GmbH')
+  await page.getByLabel('Position *').fill('Softwareentwickler:in')
   await page.getByLabel('Ansprechpartner').fill('Herr Muster')
   await page.getByLabel('E-Mail').fill('herr@muster.de')
   await page.getByRole('button', { name: 'Bewerbung anlegen (+10 XP)' }).click()
