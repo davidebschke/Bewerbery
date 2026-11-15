@@ -90,6 +90,14 @@ Wochen-Streak motivieren. Anzeige im Header, Badges in einer Übersicht.
 
 1. **Given** 0 XP, **When** ich eine Bewerbung anlege, **Then** +10 XP Toast und XP-Balken steigt.
 2. **Given** XP über Levelschwelle, **Then** Level-Up-Hinweis.
+3. **Given** eine Aktion erreicht eine neue Abzeichen-Stufe, **Then** Hinweis „Abzeichen freigeschaltet“.
+
+**Erweiterung (Issue #9)**: Bis zu 5.000 Level. Level 1–7 haben feste Schwellen
+(0/50/120/220/360/550/800 XP), danach kostet jedes Level 10 XP mehr als das vorige. Rangtitel gelten
+für wachsende Blöcke (8–9, 10–14, 15–24, 25–49, 50–99, 100–249, 250–499, 500–999, 1000–2499,
+2500–4999, 5000). Abzeichen-Kategorien: Bewerbungen, Nachfragen, Termine und Absagen mit den Stufen
+1/10/25/50/100/150/200/1000, Angebote 1/3/5/10, Serien 3/5/10/26/52 Wochen. Der Erfolge-Dialog
+gruppiert nach Kategorie und zeigt bei gesperrten Abzeichen den Fortschritt.
 
 ---
 

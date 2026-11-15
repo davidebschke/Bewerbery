@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeApplication, makeData } from '@shared/testing/fixtures'
-import { installMockApi, makeDocument, type MockApi } from '../../../../../src/renderer/src/test/mockApi'
+import {
+  installMockApi,
+  makeDocument,
+  type MockApi,
+} from '../../../../../src/renderer/src/test/mockApi'
 import { useAppStore } from '../../../../../src/renderer/src/stores/appStore'
 
 const store = () => useAppStore.getState()
@@ -114,6 +118,21 @@ describe('appStore', () => {
     store().addApplication(input)
     expect(store().celebration?.kind).toBe('level')
     expect(store().toasts.map((t) => t.kind)).toContain('level')
+  })
+
+  it('announces newly unlocked badges', () => {
+    store().addApplication(input)
+    expect(store().toasts.map((t) => [t.kind, t.message])).toEqual([
+      ['xp', '+10 XP · Bewerbung angelegt'],
+      ['badge', 'Abzeichen freigeschaltet: 🚀 Erster Schritt'],
+    ])
+  })
+
+  it('does not repeat badge toasts for already unlocked tiers', () => {
+    store().addApplication(input)
+    useAppStore.setState({ toasts: [] })
+    store().addApplication(input)
+    expect(store().toasts.map((t) => t.kind)).toEqual(['xp'])
   })
 
   it('updates and validates settings', () => {

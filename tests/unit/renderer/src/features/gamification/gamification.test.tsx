@@ -1,7 +1,8 @@
 import confetti from 'canvas-confetti'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MAX_LEVEL, getBadges, xpForLevel } from '@shared/domain/gamification'
 import { progressSchema } from '@shared/schemas'
 import { makeApplication, makeData } from '@shared/testing/fixtures'
 import { freezeToday } from '../../../../../../src/renderer/src/test/utils'
@@ -26,9 +27,15 @@ describe('XpBar', () => {
     expect(onOpen).toHaveBeenCalled()
   })
 
+  it('formats large XP values with thousands separators', () => {
+    render(<XpBar xp={xpForLevel(100) + 1100} onOpenBadges={() => {}} />)
+    expect(screen.getByRole('button', { name: /Level 100: Jobmarkt-Meister/ })).toBeInTheDocument()
+    expect(screen.getByText('1.100/1.190 XP')).toBeInTheDocument()
+  })
+
   it('shows total XP at max level', () => {
-    render(<XpBar xp={999} onOpenBadges={() => {}} />)
-    expect(screen.getByText('999 XP')).toBeInTheDocument()
+    render(<XpBar xp={xpForLevel(MAX_LEVEL)} onOpenBadges={() => {}} />)
+    expect(screen.getByText('125.924.260 XP')).toBeInTheDocument()
   })
 })
 
@@ -55,10 +62,28 @@ describe('BadgesDialog', () => {
   it('lists locked and unlocked badges', () => {
     const progress = progressSchema.parse({ xp: 20, applicationsCreated: 1 })
     render(<BadgesDialog open onClose={() => {}} progress={progress} today={today} />)
-    expect(screen.getByText(/1 von 9 Abzeichen/)).toBeInTheDocument()
-    expect(screen.getByText(/Noch 30 XP bis „Motivierter Starter“/)).toBeInTheDocument()
+    const total = getBadges(progress, today).length
+    expect(screen.getByText(new RegExp(`1 von ${total} Abzeichen`))).toBeInTheDocument()
+    expect(screen.getByText(/Noch 30 XP bis Level 2/)).toBeInTheDocument()
     expect(screen.getByRole('listitem', { name: 'Erster Schritt' })).toBeInTheDocument()
     expect(screen.getByRole('listitem', { name: 'Volltreffer (gesperrt)' })).toBeInTheDocument()
+  })
+
+  it('groups badges into category sections with progress', () => {
+    const progress = progressSchema.parse({ applicationsCreated: 17 })
+    render(<BadgesDialog open onClose={() => {}} progress={progress} today={today} />)
+    const section = screen.getByRole('region', { name: /Bewerbungen/ })
+    expect(within(section).getByText('2/8 freigeschaltet')).toBeInTheDocument()
+    const marathon = within(section).getByRole('listitem', { name: 'Marathon (gesperrt)' })
+    expect(within(marathon).getByText('17/25')).toBeInTheDocument()
+    expect(
+      within(marathon).getByRole('progressbar', { name: 'Fortschritt Marathon' }),
+    ).toHaveAttribute('aria-valuenow', '68')
+    const unlocked = within(section).getByRole('listitem', { name: 'Fleißig' })
+    expect(within(unlocked).queryByRole('progressbar')).not.toBeInTheDocument()
+    for (const title of ['Nachfragen', 'Termine', 'Angebote', 'Absagen', 'Serien']) {
+      expect(screen.getByRole('region', { name: new RegExp(title) })).toBeInTheDocument()
+    }
   })
 
   it('omits the next-level hint at max level', () => {
@@ -66,10 +91,11 @@ describe('BadgesDialog', () => {
       <BadgesDialog
         open
         onClose={() => {}}
-        progress={progressSchema.parse({ xp: 5000 })}
+        progress={progressSchema.parse({ xp: xpForLevel(MAX_LEVEL) })}
         today={today}
       />,
     )
+    expect(screen.getByText(/Level 5\.000 von 5\.000/)).toBeInTheDocument()
     expect(screen.queryByText(/Noch .* XP bis/)).not.toBeInTheDocument()
   })
 })

@@ -49,7 +49,11 @@ Kopfzeile („Abgeschickt am" links, „Status" rechts) und drei Kacheln („Unt
 „Kontakt zum Unternehmen", „Dokumente und Notizen" – nur Dokumentnamen, keine Dateiinhalte; die
 Nachfass-Frist wird nicht exportiert).
 Ein dezentes Gamification-System (XP, Level, Abzeichen, Wochen-Serie, Konfetti) motiviert am Ball zu
-bleiben, und optionale System-Benachrichtigungen erinnern rechtzeitig ans Nachhaken.
+bleiben, und optionale System-Benachrichtigungen erinnern rechtzeitig ans Nachhaken. Es gibt bis zu
+5.000 Level mit Rangtiteln, deren XP-Abstand stetig wächst. Die Abzeichen sind nach Kategorien
+gestaffelt: Bewerbungen, Nachfragen, Termine und Absagen (je 1 bis 1.000), Angebote (1 bis 10) und
+Wochen-Serien (3 bis 52 Wochen). Neu freigeschaltete Abzeichen werden per Hinweis gemeldet, und
+gesperrte Abzeichen zeigen ihren Fortschritt.
 
 Alle Daten bleiben **zu 100 % lokal** auf dem Rechner (`%APPDATA%/Bewerbery` unter Windows bzw.
 `~/.config/Bewerbery` unter Linux) – keine Cloud, kein Tracking. Die App unterstützt hellen und
@@ -242,7 +246,11 @@ a printable summary to a location of your choice: each application is shown as a
 a header line ("Sent on" on the left, "Status" on the right) and three tiles ("Company and
 position", "Contact at the company", "Documents and notes" – document names only, no file contents;
 the follow-up deadline is not exported). A subtle gamification system (XP, levels, badges, weekly streak, confetti)
-keeps you motivated, and optional system notifications remind you to follow up in time.
+keeps you motivated, and optional system notifications remind you to follow up in time. There are up
+to 5,000 levels with rank titles, and the XP needed per level keeps growing. Badges are tiered by
+category: applications, follow-ups, interviews and rejections (1 to 1,000 each), offers (1 to 10)
+and weekly streaks (3 to 52 weeks). Newly unlocked badges are announced with a notice, and locked
+badges show their progress.
 
 All data stays **100 % local** on the machine (`%APPDATA%/Bewerbery` on Windows, or
 `~/.config/Bewerbery` on Linux) – no cloud, no tracking. The app supports light and dark mode and is
