@@ -3,6 +3,7 @@ import { progressSchema } from '../../../../src/shared/schemas'
 import { makeApplication } from '../../../../src/shared/testing/fixtures'
 import {
   MAX_LEVEL,
+  awardImport,
   awardXp,
   type BadgeCategory,
   getBadgeGroups,
@@ -148,6 +149,37 @@ describe('stageEvent', () => {
     expect(stageEvent(app, 'applied')).toBeNull()
     expect(stageEvent(app, 'interview')).toBe('interview')
     expect(stageEvent({ ...app, awardedStages: ['interview'] }, 'interview')).toBeNull()
+  })
+})
+
+describe('awardImport', () => {
+  it('counts creation, follow-ups and reached stages in one result', () => {
+    const progress = progressSchema.parse({})
+    const result = awardImport(
+      progress,
+      [
+        makeApplication({ stage: 'applied' }),
+        makeApplication({ stage: 'rejected', lastFollowUpAt: '2026-09-10' }),
+        makeApplication({ stage: 'offer' }),
+      ],
+      today,
+    )
+    expect(result.progress).toMatchObject({
+      applicationsCreated: 3,
+      followUps: 1,
+      rejections: 1,
+      offers: 1,
+      interviews: 0,
+      activeWeeks: ['2026-W39'],
+    })
+    expect(result.gained).toBe(10 * 3 + 5 + 5 + 100)
+    expect(result.progress.xp).toBe(result.gained)
+    expect(result.leveledUp).toBe(true)
+  })
+
+  it('reports no level-up for an empty import', () => {
+    const progress = progressSchema.parse({ xp: 10 })
+    expect(awardImport(progress, [], today)).toEqual({ progress, gained: 0, leveledUp: false })
   })
 })
 

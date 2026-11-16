@@ -149,6 +149,31 @@ export function stageEvent(application: Application, stage: Stage): XpEvent | nu
   return stage
 }
 
+/**
+ * Belohnt importierte Bewerbungen wie manuell angelegte: Anlegen, ggf. Nachfrage und erreichte
+ * Phase zählen – aber als ein Ergebnis, damit die Oberfläche nur eine Sammelmeldung zeigt.
+ */
+export function awardImport(
+  progress: Progress,
+  applications: Application[],
+  today: Date,
+): AwardResult {
+  const before = getLevelInfo(progress.xp).current.level
+  let next = progress
+  let gained = 0
+  const award = (event: XpEvent) => {
+    const result = awardXp(next, event, today)
+    next = result.progress
+    gained += result.gained
+  }
+  for (const application of applications) {
+    award('create')
+    if (application.lastFollowUpAt) award('followUp')
+    if (application.stage !== 'applied') award(application.stage)
+  }
+  return { progress: next, gained, leveledUp: getLevelInfo(next.xp).current.level > before }
+}
+
 /** Anzahl aufeinanderfolgender aktiver Wochen bis zur aktuellen (oder letzten) Woche */
 export function getStreak(activeWeeks: string[], today: Date): number {
   const set = new Set(activeWeeks)

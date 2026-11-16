@@ -83,6 +83,7 @@ test('creates an application and keeps it after restart', async () => {
 
   await page.getByRole('button', { name: 'Erste Bewerbung anlegen' }).click()
   await page.getByLabel('Unternehmen *').fill('Muster GmbH')
+  await page.getByLabel('Position *').fill('Softwareentwickler:in')
   await page.getByLabel('Ansprechpartner').fill('Herr Muster')
   await page.getByLabel('E-Mail').fill('herr@muster.de')
   await page.getByRole('button', { name: 'Bewerbung anlegen (+10 XP)' }).click()
@@ -164,10 +165,7 @@ test('exports selected applications as a pdf summary', async () => {
 
   const { app, page } = await launch({
     version: 1,
-    applications: [
-      application('a1', 'Muster GmbH', 5),
-      application('a2', 'Beispiel AG', 10),
-    ],
+    applications: [application('a1', 'Muster GmbH', 5), application('a2', 'Beispiel AG', 10)],
     settings: { followUpWeeks: 2, notificationsEnabled: false, theme: 'light' },
   })
 
@@ -191,4 +189,55 @@ test('exports selected applications as a pdf summary', async () => {
 
   await app.close()
   await rm(exportDir, { recursive: true, force: true })
+})
+
+test('imports applications from a spreadsheet and saves the template', async () => {
+  const fixture = join(__dirname, '../fixtures/import/02-unsortiert.ods')
+  const templateDir = await mkdtemp(join(tmpdir(), 'bewerbery-template-'))
+  const templatePath = join(templateDir, 'vorlage.xlsx')
+
+  const { app, page } = await launch()
+  // Native Dialoge werden für den Test durch feste Pfade ersetzt
+  await app.evaluate(
+    ({ dialog }, paths) => {
+      dialog.showOpenDialog = (async () => ({
+        canceled: false,
+        filePaths: [paths.fixture],
+      })) as typeof dialog.showOpenDialog
+      dialog.showSaveDialog = (async () => ({
+        canceled: false,
+        filePath: paths.templatePath,
+      })) as typeof dialog.showSaveDialog
+    },
+    { fixture, templatePath },
+  )
+
+  await page.getByRole('button', { name: 'Aus Tabelle importieren' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Bewerbungen importieren' })
+
+  await dialog.getByRole('button', { name: 'Vorlage herunterladen' }).click()
+  await expect(page.getByText('Vorlage gespeichert.')).toBeVisible()
+  const template = await readFile(templatePath)
+  expect(template.subarray(0, 2).toString('latin1')).toBe('PK')
+
+  await dialog.getByRole('button', { name: 'Datei auswählen' }).click()
+  await expect(dialog.getByText('Schritt 2 von 3')).toBeVisible()
+  await expect(dialog.getByLabel('Kopfzeile')).toHaveValue('3')
+  await dialog.getByRole('button', { name: 'Weiter zur Vorschau' }).click()
+  await expect(dialog.getByLabel('Zusammenfassung')).toContainText('5 werden importiert')
+  await dialog.getByRole('button', { name: '5 Bewerbungen importieren' }).click()
+
+  await expect(
+    page.getByText(/5 Bewerbungen importiert · 0 übersprungen · 0 Duplikate/),
+  ).toBeVisible()
+  for (const company of ['Datenwerk GmbH', 'Agilo AG', 'Küstenwerft Digital']) {
+    await expect(page.getByRole('article', { name: `Bewerbung bei ${company}` })).toBeVisible()
+  }
+  await app.close()
+
+  // Importierte Daten sind gespeichert
+  const saved = JSON.parse(await readFile(join(userData, 'bewerbery-data.json'), 'utf8'))
+  expect(saved.applications).toHaveLength(5)
+  expect(saved.progress.applicationsCreated).toBe(5)
+  await rm(templateDir, { recursive: true, force: true })
 })

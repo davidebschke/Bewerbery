@@ -6,6 +6,11 @@ export const DEFAULT_FOLLOW_UP_WEEKS = 2
 export const MIN_FOLLOW_UP_WEEKS = 1
 export const MAX_FOLLOW_UP_WEEKS = 12
 
+/** Grenzen für den Tabellen-Import */
+export const MAX_IMPORT_FILE_BYTES = 5 * 1024 * 1024
+export const MAX_IMPORT_ROWS = 5000
+export const MAX_IMPORT_COLUMNS = 200
+
 /** Ab diesem Anteil der Frist gilt eine Bewerbung als „bald fällig“ */
 export const SOON_THRESHOLD = 0.6
 

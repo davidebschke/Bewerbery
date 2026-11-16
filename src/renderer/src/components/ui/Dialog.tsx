@@ -10,7 +10,7 @@ export interface DialogProps {
   onClose(): void
   children: ReactNode
   footer?: ReactNode
-  size?: 'md' | 'lg'
+  size?: 'md' | 'lg' | 'xl'
 }
 
 /** Modaler Dialog – auf schmalen Fenstern als Vollbild */
@@ -55,7 +55,7 @@ export function Dialog({ open, title, onClose, children, footer, size = 'md' }: 
         aria-labelledby={titleId}
         className={cn(
           'relative flex h-full w-full flex-col bg-surface shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl sm:border sm:border-line',
-          size === 'lg' ? 'sm:max-w-2xl' : 'sm:max-w-md',
+          { md: 'sm:max-w-md', lg: 'sm:max-w-2xl', xl: 'sm:max-w-4xl' }[size],
         )}
       >
         <header className="flex items-center justify-between gap-4 border-b border-line px-5 py-4">

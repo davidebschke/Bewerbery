@@ -1,4 +1,5 @@
-import type { AppData, ApplicationDocument } from './types'
+import type { TemplateFormat } from './domain/import/template'
+import type { AppData, ApplicationDocument, ImportWorkbook } from './types'
 
 export const IPC = {
   loadData: 'data:load',
@@ -9,12 +10,17 @@ export const IPC = {
   removeDocument: 'documents:remove',
   removeAllDocuments: 'documents:remove-all',
   exportApplicationsPdf: 'pdf:export-applications',
+  pickImportFile: 'import:pick-file',
+  saveImportTemplate: 'import:save-template',
 } as const
 
 export interface PdfExportOutcome {
   canceled: boolean
   filePath?: string
 }
+
+/** Ergebnis eines Speichern-Dialogs */
+export type FileSaveOutcome = PdfExportOutcome
 
 /** Typisierte API, die das Preload-Skript als `window.api` bereitstellt */
 export interface BewerberyApi {
@@ -26,5 +32,8 @@ export interface BewerberyApi {
   removeDocument(applicationId: string, document: ApplicationDocument): Promise<void>
   removeAllDocuments(applicationId: string): Promise<void>
   exportApplicationsPdf(applicationIds: string[]): Promise<PdfExportOutcome>
+  /** Tabellendatei auswählen und lesen; `null` = Dialog abgebrochen */
+  pickImportFile(): Promise<ImportWorkbook | null>
+  saveImportTemplate(format: TemplateFormat): Promise<FileSaveOutcome>
   getPathForFile(file: File): string
 }

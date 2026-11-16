@@ -1,3 +1,5 @@
 * text=auto eol=lf
 *.png binary
 *.ico binary
+# Testdateien byte-genau behalten (Zeilenenden, Windows-1252)
+tests/fixtures/** -text

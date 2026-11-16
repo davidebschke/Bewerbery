@@ -1,8 +1,10 @@
 import { z } from 'zod'
 import { IPC } from '@shared/ipc'
+import { TEMPLATE_FORMATS } from '@shared/domain/import/template'
 import { applicationDocumentSchema } from '@shared/schemas'
 import type { AppData } from '@shared/types'
 import type { DocumentService } from '../documents/documentService'
+import type { ImportService } from '../import/importService'
 import type { PdfExportService } from '../pdf/pdfExportService'
 import type { DataStore } from '../storage/dataStore'
 
@@ -13,6 +15,7 @@ export interface IpcDeps {
   dataStore: DataStore
   documents: DocumentService
   pdfExport: PdfExportService
+  importer: ImportService
   /** Öffnet einen Dateiauswahldialog und liefert die gewählten Pfade */
   pickFiles(): Promise<string[]>
   /** Öffnet eine Datei mit dem Standardprogramm, liefert Fehlermeldung oder '' */
@@ -25,6 +28,7 @@ export interface IpcDeps {
 const idSchema = z.string().min(1)
 const pathsSchema = z.array(z.string().min(1))
 const applicationIdsSchema = z.array(idSchema)
+const templateFormatSchema = z.enum(TEMPLATE_FORMATS)
 
 export function registerIpc(deps: IpcDeps): void {
   const { ipcMain, dataStore, documents } = deps
@@ -73,4 +77,10 @@ export function registerIpc(deps: IpcDeps): void {
     const selected = data.applications.filter((application) => ids.has(application.id))
     return deps.pdfExport.exportApplications(selected, deps.now())
   })
+
+  ipcMain.handle(IPC.pickImportFile, () => deps.importer.pickWorkbook())
+
+  ipcMain.handle(IPC.saveImportTemplate, (_event, format) =>
+    deps.importer.saveTemplate(templateFormatSchema.parse(format)),
+  )
 }

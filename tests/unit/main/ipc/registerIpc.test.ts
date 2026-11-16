@@ -3,6 +3,7 @@ import { IPC } from '@shared/ipc'
 import { makeApplication, makeData } from '@shared/testing/fixtures'
 import type { ApplicationDocument } from '@shared/types'
 import type { DocumentService } from '../../../../src/main/documents/documentService'
+import type { ImportService } from '../../../../src/main/import/importService'
 import type { PdfExportService } from '../../../../src/main/pdf/pdfExportService'
 import type { DataStore } from '../../../../src/main/storage/dataStore'
 import { registerIpc, type IpcDeps } from '../../../../src/main/ipc/registerIpc'
@@ -35,11 +36,17 @@ function setup(overrides: Partial<IpcDeps> = {}) {
   const pdfExport: PdfExportService = {
     exportApplications: vi.fn(async () => ({ canceled: false, filePath: 'C:/export.pdf' })),
   }
+  const importer: ImportService = {
+    readWorkbook: vi.fn(),
+    pickWorkbook: vi.fn(async () => ({ fileName: 'a.csv', sheets: [] })),
+    saveTemplate: vi.fn(async () => ({ canceled: false, filePath: 'C:/vorlage.ods' })),
+  }
   const deps: IpcDeps = {
     ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
     dataStore,
     documents,
     pdfExport,
+    importer,
     pickFiles: vi.fn(async () => ['C:/cv.pdf']),
     openPath: vi.fn(async () => ''),
     now: () => new Date('2026-09-23T00:00:00.000Z'),
@@ -48,13 +55,24 @@ function setup(overrides: Partial<IpcDeps> = {}) {
   }
   registerIpc(deps)
   const invoke = (channel: string, ...args: unknown[]) => handlers.get(channel)!({}, ...args)
-  return { deps, dataStore, documents, pdfExport, invoke, data, handlers }
+  return { deps, dataStore, documents, pdfExport, importer, invoke, data, handlers }
 }
 
 describe('registerIpc', () => {
   it('registers all channels', () => {
     const { handlers } = setup()
     expect([...handlers.keys()].sort()).toEqual(Object.values(IPC).sort())
+  })
+
+  it('picks import files and saves validated template formats', async () => {
+    const { invoke, importer } = setup()
+    expect(await invoke(IPC.pickImportFile)).toEqual({ fileName: 'a.csv', sheets: [] })
+    expect(await invoke(IPC.saveImportTemplate, 'ods')).toEqual({
+      canceled: false,
+      filePath: 'C:/vorlage.ods',
+    })
+    expect(importer.saveTemplate).toHaveBeenCalledWith('ods')
+    expect(() => invoke(IPC.saveImportTemplate, 'exe')).toThrow()
   })
 
   it('loads and saves data and notifies about changes', async () => {

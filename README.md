@@ -55,6 +55,15 @@ gestaffelt: Bewerbungen, Nachfragen, Termine und Absagen (je 1 bis 1.000), Angeb
 Wochen-Serien (3 bis 52 Wochen). Neu freigeschaltete Abzeichen werden per Hinweis gemeldet, und
 gesperrte Abzeichen zeigen ihren Fortschritt.
 
+Bestehende Bewerbungen lassen sich über **„Bewerbungen importieren“** aus einer Tabelle übernehmen –
+als CSV (`;`, `,` oder Tab; UTF-8 oder Windows-1252), LibreOffice (`.ods`) oder Excel (`.xlsx`). Ein
+Assistent erkennt Kopfzeile, Tabellenblatt und Spalten automatisch (deutsche und englische
+Spaltennamen, sonst anhand des Inhalts), vereinheitlicht Datums- und Statuswerte und zeigt vor dem
+Import eine Vorschau mit Fehlern, Hinweisen und Duplikaten. Nicht erkannte Spalten und Werte landen
+in den Notizen, damit nichts verloren geht. Eine ausfüllbare Vorlage gibt es als `.xlsx`, `.ods` und
+`.csv`. Importierte Bewerbungen zählen für XP und Abzeichen, gemeldet wird aber nur eine
+Sammelmeldung. Unternehmen, Position und Absendedatum sind Pflichtfelder.
+
 Alle Daten bleiben **zu 100 % lokal** auf dem Rechner (`%APPDATA%/Bewerbery` unter Windows bzw.
 `~/.config/Bewerbery` unter Linux) – keine Cloud, kein Tracking. Die App unterstützt hellen und
 dunklen Modus und ist responsiv ab 360 px Fensterbreite.
@@ -76,6 +85,7 @@ dunklen Modus und ist responsiv ab 360 px Fensterbreite.
 | date-fns 4                        | Datumsberechnungen (Fristen, Follow-ups)                     |
 | Motion                            | Animationen (Konfetti, dezente Übergänge)                    |
 | pdf-lib                           | PDF-Erzeugung für den Bewerbungs-Export (reines JS, keine nativen Module) |
+| fflate                            | ZIP-Lesen/-Schreiben für `.ods`/`.xlsx` beim Tabellen-Import (reines JS)   |
 | Vitest 5 + Testing Library        | Unit- & Komponententests mit Coverage-Gate                   |
 | Playwright (Electron)             | End-to-End-Tests gegen die laufende App                      |
 | electron-builder 26               | Paketierung als Installer/portable/AppImage/tar.gz           |
@@ -86,19 +96,27 @@ dunklen Modus und ist responsiv ab 360 px Fensterbreite.
 
 ```text
 src/
-├── shared/      Typen, Zod-Schemas, reine Domain-Logik (Fortschritt, Pinning, XP)
-├── main/        Electron-Hauptprozess: storage/, documents/, notifications/, ipc/
+├── shared/      Typen, Zod-Schemas, reine Domain-Logik (Fortschritt, Pinning, XP,
+│                Tabellen-Import: domain/import/)
+├── main/        Electron-Hauptprozess: storage/, documents/, notifications/, pdf/,
+│                import/ (CSV/ODS/XLSX lesen, Vorlagen schreiben), ipc/
 ├── preload/     typisierte window.api-Bridge
-└── renderer/    React-UI: features/ (applications, followup, gamification, settings),
-                 components/ui/, stores/, hooks/, lib/
+└── renderer/    React-UI: features/ (applications, followup, gamification, import, settings),
+                 components/ui/, stores/, hooks/, lib/, assets/ (icon.png)
+build/           Build-Ressourcen (icon.png = App-Icon der exe)
 tests/
 ├── unit/        Unit- & Komponententests (spiegelt die Struktur von src/)
+├── fixtures/    Testdateien, z. B. import/ für alle Import-Problemfälle (siehe README dort)
 └── e2e/         Playwright-Tests
-scripts/         Build- & Wartungsskripte (Linux-Builds per Docker, Override-Prüfung)
+scripts/         Build- & Wartungsskripte (Linux-Builds per Docker, Override-Prüfung,
+                 Erzeugen der Import-Testdateien)
 specs/           Spec-Kit-Spezifikationen (spec, plan, tasks)
 .specify/        Spec-Kit (Constitution, Vorlagen, Skripte)
 .claude/         Claude-Code-Regeln, Einstellungen und Spec-Kit-Skills
 ```
+
+> **Hinweis:** `src/renderer/src/assets/icon.png` (Logo im Header) ist eine Kopie von
+> `build/icon.png` (Icon der exe). Wird das Icon geändert, beide Dateien aktualisieren.
 
 <a id="vscode-start-de"></a>
 
@@ -165,6 +183,10 @@ npm run test:all    # alles zusammen
 ```
 
 Ein Husky-Pre-Commit-Hook führt Typecheck, Lint und Tests automatisch aus.
+
+Die Testdateien für den Tabellen-Import liegen unter `tests/fixtures/import/` (Beschreibung und
+erwartete Ergebnisse in der dortigen README). Sie eignen sich auch zum manuellen Ausprobieren in der
+App. Neu erzeugen (benötigt LibreOffice): `node scripts/generate-import-samples.mjs`.
 
 Die E2E-Tests lassen sich auch gegen die gepackte App ausführen:
 
@@ -252,6 +274,15 @@ category: applications, follow-ups, interviews and rejections (1 to 1,000 each),
 and weekly streaks (3 to 52 weeks). Newly unlocked badges are announced with a notice, and locked
 badges show their progress.
 
+Existing applications can be taken over from a spreadsheet via **"Bewerbungen importieren"** (import
+applications) – as CSV (`;`, `,` or tab; UTF-8 or Windows-1252), LibreOffice (`.ods`) or Excel
+(`.xlsx`). A wizard detects the header row, sheet and columns automatically (German and English
+column names, otherwise by content), normalises dates and status values and shows a preview with
+errors, notices and duplicates before importing. Unrecognised columns and values are kept in the
+notes so nothing gets lost. A fillable template is available as `.xlsx`, `.ods` and `.csv`. Imported
+applications count towards XP and badges, but only a single summary notice is shown. Company,
+position and submission date are required fields.
+
 All data stays **100 % local** on the machine (`%APPDATA%/Bewerbery` on Windows, or
 `~/.config/Bewerbery` on Linux) – no cloud, no tracking. The app supports light and dark mode and is
 responsive down to a 360 px window width.
@@ -273,6 +304,7 @@ responsive down to a 360 px window width.
 | date-fns 4                         | Date calculations (deadlines, follow-ups)                       |
 | Motion                             | Animations (confetti, subtle transitions)                       |
 | pdf-lib                            | PDF generation for the application export (pure JS, no native modules) |
+| fflate                             | ZIP reading/writing for `.ods`/`.xlsx` in the spreadsheet import (pure JS) |
 | Vitest 5 + Testing Library         | Unit & component tests with coverage gate                       |
 | Playwright (Electron)              | End-to-end tests against the running app                        |
 | electron-builder 26                | Packaging as installer/portable/AppImage/tar.gz                 |
@@ -283,19 +315,27 @@ responsive down to a 360 px window width.
 
 ```text
 src/
-├── shared/      Types, Zod schemas, pure domain logic (progress, pinning, XP)
-├── main/        Electron main process: storage/, documents/, notifications/, ipc/
+├── shared/      Types, Zod schemas, pure domain logic (progress, pinning, XP,
+│                spreadsheet import: domain/import/)
+├── main/        Electron main process: storage/, documents/, notifications/, pdf/,
+│                import/ (read CSV/ODS/XLSX, write templates), ipc/
 ├── preload/     typed window.api bridge
-└── renderer/    React UI: features/ (applications, followup, gamification, settings),
-                 components/ui/, stores/, hooks/, lib/
+└── renderer/    React UI: features/ (applications, followup, gamification, import, settings),
+                 components/ui/, stores/, hooks/, lib/, assets/ (icon.png)
+build/           Build resources (icon.png = app icon of the exe)
 tests/
 ├── unit/        Unit & component tests (mirrors the src/ structure)
+├── fixtures/    test files, e.g. import/ for every import edge case (see the README there)
 └── e2e/         Playwright tests
-scripts/         build & maintenance scripts (Linux builds via Docker, override check)
+scripts/         build & maintenance scripts (Linux builds via Docker, override check,
+                 generating the import test files)
 specs/           Spec-Kit specifications (spec, plan, tasks)
 .specify/        Spec-Kit (constitution, templates, scripts)
 .claude/         Claude Code rules, settings and Spec-Kit skills
 ```
+
+> **Note:** `src/renderer/src/assets/icon.png` (logo in the header) is a copy of
+> `build/icon.png` (icon of the exe). When changing the icon, update both files.
 
 <a id="vscode-start-en"></a>
 
@@ -362,6 +402,10 @@ npm run test:all    # everything together
 ```
 
 A Husky pre-commit hook automatically runs typecheck, lint and tests.
+
+The test files for the spreadsheet import live in `tests/fixtures/import/` (description and expected
+results in the README there). They are also handy for trying the import manually in the app.
+Regenerate them (requires LibreOffice): `node scripts/generate-import-samples.mjs`.
 
 The E2E tests can also be run against the packaged app:
 

@@ -8,7 +8,7 @@ import {
 import { useAppStore } from '../../../../../src/renderer/src/stores/appStore'
 
 const store = () => useAppStore.getState()
-const input = { company: 'ACME', sentAt: '2026-09-20' }
+const input = { company: 'ACME', position: 'Dev', sentAt: '2026-09-20' }
 
 let api: MockApi
 
@@ -133,6 +133,39 @@ describe('appStore', () => {
     useAppStore.setState({ toasts: [] })
     store().addApplication(input)
     expect(store().toasts.map((t) => t.kind)).toEqual(['xp'])
+  })
+
+  it('imports applications with one save, one summary and badge toasts', () => {
+    useAppStore.setState({ toasts: [] })
+    const imported = [
+      makeApplication({ company: 'A', position: 'P', stage: 'offer', awardedStages: ['offer'] }),
+      makeApplication({ company: 'B', position: 'P', lastFollowUpAt: '2026-09-10' }),
+    ]
+    store().importApplications(imported, { skipped: 2, duplicates: 1 })
+    expect(store().data.applications.map((app) => app.company)).toEqual(['A', 'B'])
+    expect(store().data.progress).toMatchObject({
+      applicationsCreated: 2,
+      offers: 1,
+      followUps: 1,
+      xp: 10 + 100 + 10 + 5,
+    })
+    expect(store().toasts.map((t) => [t.kind, t.message])).toEqual(
+      expect.arrayContaining([
+        ['xp', '2 Bewerbungen importiert · 2 übersprungen · 1 Duplikat · +125 XP'],
+        ['badge', 'Abzeichen freigeschaltet: 🚀 Erster Schritt'],
+        ['level', 'Level-Up! 🎉'],
+      ]),
+    )
+    expect(store().celebration?.kind).toBe('level')
+    expect(api.saveData).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports an empty import as info without XP', () => {
+    useAppStore.setState({ toasts: [] })
+    store().importApplications([], { skipped: 3, duplicates: 2 })
+    expect(store().toasts.map((t) => [t.kind, t.message])).toEqual([
+      ['info', '0 Bewerbungen importiert · 3 übersprungen · 2 Duplikate'],
+    ])
   })
 
   it('updates and validates settings', () => {

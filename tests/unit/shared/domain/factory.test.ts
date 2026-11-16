@@ -12,7 +12,7 @@ describe('factory', () => {
 
   it('creates an application with system fields', () => {
     const now = new Date('2026-09-23T08:00:00.000Z')
-    const app = createApplication({ company: ' ACME ', sentAt: '2026-09-20' }, { now })
+    const app = createApplication({ company: ' ACME ', position: 'Dev', sentAt: '2026-09-20' }, { now })
     expect(app.company).toBe('ACME')
     expect(app.createdAt).toBe(now.toISOString())
     expect(app.updatedAt).toBe(now.toISOString())
@@ -23,7 +23,7 @@ describe('factory', () => {
   it('accepts a predefined id and documents', () => {
     const doc = { id: 'd', name: 'cv.pdf', storedName: 'd-cv.pdf', size: 1, addedAt: 'x' }
     const app = createApplication(
-      { company: 'ACME', sentAt: '2026-09-20' },
+      { company: 'ACME', position: 'Dev', sentAt: '2026-09-20' },
       { id: 'draft-1', documents: [doc] },
     )
     expect(app.id).toBe('draft-1')
@@ -31,6 +31,6 @@ describe('factory', () => {
   })
 
   it('throws on invalid input', () => {
-    expect(() => createApplication({ company: '', sentAt: '2026-09-20' })).toThrow()
+    expect(() => createApplication({ company: '', position: 'Dev', sentAt: '2026-09-20' })).toThrow()
   })
 })
