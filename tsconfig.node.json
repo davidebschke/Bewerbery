@@ -26,6 +26,7 @@
     "src/preload/**/*",
     "src/shared/**/*",
     "tests/e2e/**/*",
+    "tests/fixtures/**/*.ts",
     "tests/unit/main/**/*",
     "tests/unit/preload/**/*",
     "tests/unit/shared/**/*"
