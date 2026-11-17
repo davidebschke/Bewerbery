@@ -68,7 +68,14 @@ describe('ApplicationForm', () => {
   })
 
   it('shows singular week label for a 1-week default', () => {
-    seedStore({ settings: { followUpWeeks: 1, notificationsEnabled: true, theme: 'system' } })
+    seedStore({
+      settings: {
+        followUpWeeks: 1,
+        notificationsEnabled: true,
+        theme: 'system',
+        aiConsentAt: null,
+      },
+    })
     renderForm()
     expect(screen.getByRole('option', { name: 'Standard (1 Woche)' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: '1 Woche' })).toBeInTheDocument()

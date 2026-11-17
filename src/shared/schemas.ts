@@ -55,6 +55,8 @@ export const settingsSchema = z.object({
   followUpWeeks: followUpWeeksSchema.default(DEFAULT_FOLLOW_UP_WEEKS),
   notificationsEnabled: z.boolean().default(true),
   theme: themeSchema.default('system'),
+  /** Zeitpunkt der Datenschutz-Zustimmung für den KI-Assistenten; `null` = noch nicht zugestimmt */
+  aiConsentAt: z.string().nullable().default(null),
 })
 
 export const progressSchema = z.object({

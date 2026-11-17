@@ -12,7 +12,12 @@ describe('schemas', () => {
     expect(data).toEqual({
       version: 1,
       applications: [],
-      settings: { followUpWeeks: 2, notificationsEnabled: true, theme: 'system' },
+      settings: {
+        followUpWeeks: 2,
+        notificationsEnabled: true,
+        theme: 'system',
+        aiConsentAt: null,
+      },
       progress: {
         xp: 0,
         applicationsCreated: 0,
@@ -93,6 +98,12 @@ describe('schemas', () => {
     expect(settingsSchema.safeParse({ followUpWeeks: 0 }).success).toBe(false)
     expect(settingsSchema.safeParse({ followUpWeeks: 13 }).success).toBe(false)
     expect(settingsSchema.safeParse({ followUpWeeks: 12 }).success).toBe(true)
+  })
+
+  it('keeps the ai consent timestamp and defaults it to null', () => {
+    expect(settingsSchema.parse({}).aiConsentAt).toBeNull()
+    const at = '2026-11-17T10:00:00.000Z'
+    expect(settingsSchema.parse({ aiConsentAt: at }).aiConsentAt).toBe(at)
   })
 
   it('rejects unknown data versions', () => {
