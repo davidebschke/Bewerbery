@@ -23,8 +23,10 @@
 ## R2 – Ablauf: Generieren und Bewerten
 
 - **Decision**: Zwei Phasen.
-  1. **Generieren**: drei parallele Anfragen, je eine pro Stil (sachlich, wirkungsstark, ATS). Jede
-     liefert `{ text, changes[] }`.
+  1. **Generieren**: drei parallele Anfragen, je eine pro Stil (sachlich, wirkungsstark, ATS). Eingabe ist
+     die Absatzliste `[{ id, segments: string[] }]`; jede Anfrage liefert
+     `{ paragraphs: [{ id, segments: string[] }], changes[] }` – nur geänderte Absätze, gleiche
+     Segmentanzahl. Das Prompt verlangt zusätzlich, die Länge je Absatz etwa beizubehalten (±15 %).
   2. **Bewerten**: eine Anfrage, die Original und alle drei Varianten **gemeinsam** nach einem festen
      Schema gegen die Stellenanzeige bewertet und `{ score, coveredKeywords, missingKeywords }` je Text
      liefert.
@@ -49,22 +51,37 @@
   schädlichsten Fall (erfundene Kennzahlen bzw. Zeiträume) lokal und testbar ab.
 - **Alternatives considered**: Eine zweite KI-Prüfung (mehr Kosten und Latenz für v1).
 
-## R4 – Textextraktion ohne native Module
+## R4 – Design-Erhalt: Text austauschen statt Layout nachbauen
 
-- **Decision**:
-  - **PDF**: `unpdf` (2.2.x, keine Abhängigkeiten, bündelt einen serverlosen pdf.js-Build, Node ≥ 24 ist
-    durch Electron 44 erfüllt), `extractText(..., { mergePages: true })`.
-  - **DOCX**: vorhandenes `fflate` (Entpacken) + vorhandener XML-Leser `src/main/import/xml.ts`.
-    Ausgelesen wird `word/document.xml`, Absätze `w:p` → Zeilenumbruch, `w:tab` → Tab, `w:br` → Umbruch.
-  - **TXT**: UTF-8 (BOM entfernen). Ist der Text nicht als UTF-8 lesbar, wird `windows-1252` über
-    `TextDecoder` genutzt.
-- **Rationale**: Es gibt keine neuen nativen Abhängigkeiten. DOCX nutzt bereits erprobten Code
-  (ODS/XLSX-Import), der Entity-sicher ist (keine externen Entities).
-- **Alternatives considered**: `pdfjs-dist` direkt (größere Integration, Worker-Setup im Main),
-  `pdf-parse` (veraltet, bündelt alte pdf.js-Versionen), `mammoth` für DOCX (zusätzliche Abhängigkeit,
-  deren Formatierung nicht gebraucht wird).
-- **Grenzen**: Dateien über 10 MB werden abgelehnt. Ein PDF ohne Textebene ergibt den Hinweis „Kein Text
-  gefunden“. Verschlüsselte PDFs werden mit eigener Meldung abgelehnt.
+- **Decision**: Die Originaldatei (DOCX/ODT) wird als ZIP mit dem vorhandenen `fflate` gelesen. Der
+  Haupt-XML-Teil (`word/document.xml` bzw. `content.xml`) wird mit einem **positionsgenauen** Tokenizer
+  in Absätze und Segmente zerlegt. Die KI liefert pro Absatz neue Segmenttexte. Die App ersetzt nur den
+  Text der betroffenen Textknoten (String-Splicing über die gemerkten Offsets, von hinten nach vorn) und
+  packt alle übrigen ZIP-Einträge byte-identisch wieder ein.
+- **Segmente**:
+  - **DOCX**: Ein Segment ist ein Lauf `w:r` mit Text (`w:t`). Aufeinanderfolgende Läufe mit identischem
+    `w:rPr` werden zu einem Segment zusammengefasst (Word zerlegt Text oft wegen Rechtschreibprüfung/rsid).
+    Beim Zurückschreiben erhält der erste `w:t` des Segments den neuen Text (`xml:space="preserve"`), die
+    übrigen `w:t` des Segments werden geleert. `w:tab`/`w:br` bleiben als Strukturelemente stehen und
+    trennen Segmente. Absätze in Tabellen, Textfeldern (`w:txbxContent`) und Inhaltssteuerelementen
+    (`w:sdt`) werden mit erfasst. Kopf-/Fußzeilen (`header*.xml`, `footer*.xml`) bleiben unberührt.
+    Feldcode-Text (`w:instrText`) und gelöschter Text (`w:delText`) werden ignoriert. Enthält das Dokument
+    nachverfolgte Änderungen (`w:ins`/`w:del`), wird es mit dem Code `tracked-changes` abgelehnt.
+  - **ODT**: Absätze sind `text:p`/`text:h`, Segmente sind direkte Textknoten bzw. `text:span` mit
+    gleichem `text:style-name`. `text:s` (Leerzeichen), `text:tab`, `text:line-break` sind
+    Strukturelemente. Mehrfach-Leerzeichen im neuen Text werden als `<text:s text:c="n"/>` kodiert.
+- **Rationale**: Es wird nichts am Layout neu erzeugt. Alles, was nicht Text ist, bleibt byte-identisch.
+  Das ist der einzige Weg, der das Design garantiert erhält (FR-011a, SC-008). Die Segmentierung pro
+  Formatierungsabschnitt erhält gemischte Formatierungen innerhalb eines Absatzes.
+- **Robustheit**: Liefert die KI für einen Absatz eine falsche Segmentanzahl oder eine unbekannte ID,
+  bleibt dieser Absatz unverändert (`mergeRewrite` im Domain-Code, getestet). Leere Absätze und Absätze
+  ohne Buchstaben (z. B. nur „•“ oder Datumsangaben wie „2019 – 2023“) werden nicht an die KI geschickt.
+- **Alternatives considered**: Layout per KI oder `docx`-Bibliothek nachbauen (nie identisch).
+  PDF-Bearbeitung (Text an festen Koordinaten, Teilschriften; abgelehnt, siehe Spec-Clarification).
+  Vollständiges DOM-Parsen und Neuserialisieren (verändert Namespaces, Whitespace und Attributreihenfolge,
+  riskiert Word-Reparaturdialoge).
+- **Grenzen**: Dateien über 10 MB, mehr als 600 Absätze oder mehr als 30 000 Zeichen Text werden
+  abgelehnt. Passwortgeschützte DOCX (verschlüsselter OLE-Container, kein ZIP) → `unreadable-file`.
 
 ## R5 – Speicherung des API-Keys
 
@@ -109,10 +126,13 @@
 - **Rationale**: Zwei Ansichten rechtfertigen keine Router-Abhängigkeit. Das Muster passt zur bestehenden
   zustandsbasierten Dialogsteuerung.
 
-## R9 – Persistenz des letzten Ergebnisses
+## R9 – Persistenz der Quelle und des letzten Ergebnisses
 
-- **Decision**: Eigene Datei `cv-last-result.json` im `userData`, atomar geschrieben und beim Laden mit
-  Zod validiert (bei ungültigen Daten wird sie ignoriert und gelöscht). Sie ist nicht Teil von `AppData`.
+- **Decision**: Beim Wählen einer CV-Datei kopiert der Main-Prozess sie nach `userData/cv/source.<ext>`
+  (ersetzt eine vorherige Quelle). Das Ergebnis liegt in `userData/cv/last-result.json`, atomar
+  geschrieben und beim Laden mit Zod validiert (ungültig → ignorieren und löschen). Varianten werden als
+  Absatz-Ersetzungen gespeichert und erst beim Speichern mit der Quelle zu einer Datei zusammengesetzt.
+  Nichts davon ist Teil von `AppData`.
 - **Rationale**: Das Ergebnis enthält vier vollständige CV-Texte. Würde es in `AppData` liegen, würde es
   bei jeder Store-Änderung mitgeschrieben und mitvalidiert.
 

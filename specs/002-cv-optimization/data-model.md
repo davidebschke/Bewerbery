@@ -2,7 +2,7 @@
 
 **Feature**: [spec.md](./spec.md) | **Research**: [research.md](./research.md)
 
-Alle Schemas sind Zod-Schemas in `src/shared/` (Typen werden per `z.infer` abgeleitet).
+Alle Schemas sind Zod-Schemas in `src/shared/`, die Typen werden per `z.infer` abgeleitet.
 
 ## 1. Bewerbung (erweitert) – `applicationSchema`
 
@@ -10,9 +10,9 @@ Alle Schemas sind Zod-Schemas in `src/shared/` (Typen werden per `z.infer` abgel
 |---|---|---|
 | `jobDescription` *(neu)* | `string` | `default('')`, max. 15 000 Zeichen (`MAX_JOB_DESCRIPTION_CHARS`) |
 
-- Wird zusätzlich in `applicationInputSchema` aufgenommen (Formularfeld „Stellenanzeige“, mehrzeilig).
-- Abwärtskompatibel: Altdaten ohne das Feld erhalten `''`. `DATA_VERSION` bleibt unverändert.
-- Der Tabellen-Import ordnet das Feld vorerst nicht zu (außerhalb des Scopes).
+- Das Feld kommt auch in `applicationInputSchema` (Formularfeld „Stellenanzeige“, mehrzeilig).
+- Es ist abwärtskompatibel: Altdaten ohne das Feld erhalten `''`, und `DATA_VERSION` bleibt unverändert.
+- Der Tabellen-Import ordnet das Feld vorerst nicht zu, das liegt außerhalb des Umfangs.
 
 ## 2. Einstellungen (erweitert) – `settingsSchema`
 
@@ -20,59 +20,83 @@ Alle Schemas sind Zod-Schemas in `src/shared/` (Typen werden per `z.infer` abgel
 |---|---|---|
 | `aiConsentAt` *(neu)* | `string \| null` | ISO-Zeitstempel der Datenschutz-Zustimmung, `default(null)` |
 
-- `null` bedeutet: Vor dem nächsten Senden erscheint der Datenschutzhinweis (FR-008).
-- „Zustimmung widerrufen“ setzt den Wert wieder auf `null`.
+`null` bedeutet, dass vor dem nächsten Senden der Datenschutzhinweis erscheint. „Zustimmung widerrufen“ setzt `null`.
 
-## 3. KI-Key-Status – `aiKeyStatusSchema` (nur Main ↔ Renderer, nie der Key selbst)
+## 3. KI-Key-Status – `aiKeyStatusSchema` (enthält nie den Key selbst)
 
 | Feld | Typ | Regel |
 |---|---|---|
 | `configured` | `boolean` | |
-| `hint` | `string \| null` | genau 4 Zeichen (Endung des Keys) oder `null` |
-| `encryptionAvailable` | `boolean` | `false` → Speichern deaktiviert (FR-006) |
+| `hint` | `string \| null` | die letzten 4 Zeichen oder `null` |
+| `encryptionAvailable` | `boolean` | bei `false` ist Speichern deaktiviert (FR-006) |
 
-Gespeichert im Main als `ai-key.bin` (verschlüsselt) + `ai-key.json` (`{ hint }`).
+Eingabe: `apiKeySchema = z.string().trim().min(20).max(400).regex(/^\S+$/)`.
 
-Eingabe-Validierung beim Setzen: `apiKeySchema = z.string().trim().min(20).max(400).regex(/^\S+$/)`.
-Ein Präfix wird bewusst nicht geprüft, weil sich Key-Formate ändern können.
+## 4. CV-Quelle – `cvSourceSchema`
 
-## 4. Optimierungsauftrag – `cvOptimizationRequestSchema`
-
-| Feld | Typ | Regel |
-|---|---|---|
-| `cvText` | `string` | trim, 1 – 30 000 Zeichen (`MAX_CV_CHARS`) |
-| `jobDescription` | `string` | trim, 1 – 15 000 Zeichen |
-| `applicationId` | `string \| null` | optional, Bezug für Titel und „Als Dokument speichern“ |
-| `jobTitle` | `string` | max. 200 Zeichen, Anzeige im Ergebnis (z. B. „Frontend-Entwickler · Acme“) |
-
-## 5. Stil – `variantStyleSchema`
-
-`z.enum(['factual', 'impactful', 'ats'])`, Anzeigenamen in `VARIANT_STYLE_LABELS`:
-`factual` → „Sachlich“, `impactful` → „Wirkungsstark“, `ats` → „ATS-optimiert“. Die Reihenfolge ist fest
-(`VARIANT_STYLES`).
-
-## 6. Bewertung – `assessmentSchema`
+Wird beim Wählen der Datei im Main erzeugt. Die Datei selbst liegt unter `userData/cv/source.<ext>`.
 
 | Feld | Typ | Regel |
 |---|---|---|
-| `score` | `number` | Ganzzahl, 0 – 100 |
+| `format` | `'docx' \| 'odt'` | |
+| `fileName` | `string` | Originalname, z. B. `Lebenslauf.docx` |
+| `paragraphs` | `CvParagraph[]` | max. 600, Dokumentreihenfolge |
+| `charCount` | `number` | Summe der Segmentlängen, ≤ 30 000 (`MAX_CV_CHARS`) |
+
+**`CvParagraph`**: `{ id: string; segments: string[]; editable: boolean }`
+
+- `id` ist stabil innerhalb der Quelle (`p0`, `p1`, …, in Dokumentreihenfolge).
+- `segments` sind die Texte der Formatierungsabschnitte (siehe Research R4). Strukturelemente (Tab,
+  Umbruch) trennen Segmente und erscheinen nicht im Text.
+- `editable` ist `false` für leere Absätze bzw. Absätze ohne Buchstaben. Solche Absätze gehen nicht an die KI.
+
+Abgeleitet: `paragraphText(p) = segments.join('')`, `sourceText(source)` = Absätze mit `\n` verbunden.
+
+## 5. Optimierungsauftrag – `cvOptimizationRequestSchema` (Renderer → Main)
+
+| Feld | Typ | Regel |
+|---|---|---|
+| `jobDescription` | `string` | getrimmt, 1 – 15 000 Zeichen |
+| `applicationId` | `string \| null` | Bezug für Titel und „An Bewerbung speichern“ |
+| `jobTitle` | `string` | max. 200 Zeichen, wird im Ergebnis angezeigt |
+
+Die CV-Quelle wird nicht übertragen. Der Main-Prozess verwendet die zuletzt gewählte Quelle, gibt es
+keine, liefert er `no-source`.
+
+## 6. Stil – `variantStyleSchema`
+
+`z.enum(['factual', 'impactful', 'ats'])` mit festen Labels: „Sachlich“, „Wirkungsstark“, „ATS-optimiert“. Die Reihenfolge ist `VARIANT_STYLES`.
+
+## 7. Bewertung – `assessmentSchema`
+
+| Feld | Typ | Regel |
+|---|---|---|
+| `score` | `number` | Ganzzahl 0 – 100 |
 | `coveredKeywords` | `string[]` | max. 25, eindeutig |
 | `missingKeywords` | `string[]` | max. 25, eindeutig |
 
-Nachbearbeitung (Domain, `normalizeAssessment`): Keywords werden getrimmt und dedupliziert. Ein
-„abgedecktes“ Keyword, das (case-insensitiv) nicht im Text vorkommt, wird zu „fehlend“ verschoben (R2).
+`normalizeAssessment(assessment, text)`: Keywords werden getrimmt und dedupliziert. Ein „abgedecktes“ Keyword, das (ohne Beachtung der Groß-/Kleinschreibung) nicht im Text vorkommt, wird nach „fehlend“ verschoben.
 
-## 7. Variante – `cvVariantSchema`
+## 8. Variante – `cvVariantSchema`
 
 | Feld | Typ | Regel |
 |---|---|---|
 | `style` | `VariantStyle` | |
-| `text` | `string` | nicht leer |
-| `changes` | `string[]` | 1 – 5 Einträge (FR-019) |
+| `rewrites` | `Record<string, string[]>` | Absatz-ID → neue Segmente. Es sind nur gültige, geänderte Absätze enthalten |
+| `changes` | `string[]` | 1 – 5 Einträge |
 | `assessment` | `Assessment` | |
-| `inventedNumbers` | `string[]` | lokal berechnet (R3). Ist die Liste nicht leer, erscheint ein Warnhinweis |
+| `inventedNumbers` | `string[]` | lokal berechnet (R3) |
+| `lengthRatio` | `number` | Textlänge Variante / Original. Ein Wert > 1,15 löst den Layout-Hinweis aus (FR-023a) |
 
-## 8. Optimierungsergebnis – `cvOptimizationResultSchema`
+Domain-Funktionen (rein, getestet):
+
+- `mergeRewrite(source, aiParagraphs)` → `rewrites`. Verworfen werden unbekannte IDs, nicht editierbare
+  Absätze, Abweichungen in der Segmentanzahl und leere Ergebnisse für nicht leere Absätze. Unverändert
+  gelieferte Absätze werden nicht aufgenommen.
+- `applyRewrites(source, rewrites)` → `CvParagraph[]` (für Vorschau, Text und Bewertung)
+- `variantText(source, variant)` → reiner Text (Kopieren, Bewertung, Plausibilität)
+
+## 9. Optimierungsergebnis – `cvOptimizationResultSchema`
 
 | Feld | Typ | Regel |
 |---|---|---|
@@ -80,38 +104,49 @@ Nachbearbeitung (Domain, `normalizeAssessment`): Keywords werden getrimmt und de
 | `createdAt` | `string` | ISO-Zeitstempel |
 | `applicationId` | `string \| null` | |
 | `jobTitle` | `string` | |
-| `original` | `{ text: string; assessment: Assessment }` | |
-| `variants` | `CvVariant[]` | genau 3, Reihenfolge = `VARIANT_STYLES` |
+| `source` | `CvSource` | Absatzstruktur der Quelle zum Zeitpunkt des Laufs |
+| `originalAssessment` | `Assessment` | |
+| `variants` | `CvVariant[]` | genau 3 in der Reihenfolge von `VARIANT_STYLES` |
 
-Abgeleitete Werte (Domain, rein, getestet):
+Abgeleitet: `scoreDelta`, `formatDelta` („+18“ / „−3“ / „±0“) und `bestVariant`. Bei Gleichstand
+entscheidet die Reihenfolge der Stile. Liegt keine Variante über dem Original, wird keine markiert, und
+es erscheint der Hinweis „Keine Variante übertrifft das Original“.
 
-- `scoreDelta(result, style)` → `variant.score − original.score` (vorzeichenbehaftet, Anzeige „+18“ / „−3“ / „±0“)
-- `bestVariant(result)` → Stil mit höchstem Score. Bei Gleichstand gewinnt die Reihenfolge in `VARIANT_STYLES`.
-  Liegt keine Variante über dem Original, gibt es keine Markierung „Beste Übereinstimmung“, sondern den
-  Hinweis „Keine Variante übertrifft das Original“.
+Persistenz: `userData/cv/last-result.json` + `userData/cv/source.<ext>` (Research R9).
 
-Persistenz: `cv-last-result.json` (siehe Research R9). Es wird genau ein Ergebnis gespeichert.
+## 10. KI-Antwortformate (Structured Outputs, nur Main)
 
-## 9. KI-Antwortformate (Structured Outputs, nur Main)
+- `generationOutputSchema`: `{ paragraphs: { id: string, segments: string[] }[], changes: string[] }`
+- `assessmentOutputSchema`: `{ original, factual, impactful, ats }`, jeweils `Assessment`
 
-- `generationOutputSchema`: `{ text: string, changes: string[] }`
-- `assessmentOutputSchema`: `{ original: Assessment, factual: Assessment, impactful: Assessment, ats: Assessment }`
+Sie liegen in `src/shared/domain/cv/schemas.ts`.
 
-Diese Schemas liegen in `src/shared/domain/cv/schemas.ts`, damit dieselbe Validierung im Main und in
-den Tests gilt.
+## 11. Dokument-Bearbeitung (rein, `src/shared/domain/cv/document/`)
 
-## 10. Fehlercodes – `AiErrorCode`
+| Funktion | Zweck |
+|---|---|
+| `tokenizeXml(xml)` | Tokens mit `start`/`end`-Offsets (positionsgenau, ohne DTD- bzw. Entity-Auflösung) |
+| `parseDocxParagraphs(xml)` | → `{ paragraphs, textNodes, hasTrackedChanges }`. Die Textknoten werden je Segment mit Offsets gemerkt |
+| `parseOdtParagraphs(xml)` | dasselbe für `content.xml` |
+| `rewriteXml(xml, nodes, rewrites)` | ersetzt Textknoten per Splicing von hinten nach vorn, escaped `& < > "` und kodiert Leerzeichen (ODT: `text:s`) |
+
+Das ZIP-Lesen und -Schreiben (`fflate`) liegt in `src/main/cv/cvDocument.ts`. Alle Einträge außer dem
+Haupt-XML werden byte-identisch übernommen, bei ODT bleibt `mimetype` der erste, unkomprimierte Eintrag.
+
+## 12. Fehlercodes – `AiErrorCode`
 
 `'no-key' | 'encryption-unavailable' | 'invalid-key' | 'network' | 'rate-limit' | 'too-long' |
-'bad-response' | 'refused' | 'server' | 'canceled' | 'busy' | 'unreadable-file' | 'no-text' |
-'file-too-large' | 'unsupported-file'`
+'bad-response' | 'refused' | 'server' | 'canceled' | 'busy' | 'no-source' | 'unsupported-file' |
+'pdf-not-supported' | 'file-too-large' | 'unreadable-file' | 'tracked-changes' | 'no-text'`
 
-Jeder Code hat in `AI_ERROR_MESSAGES` einen deutschen `title` und einen `hint` (Lösungshinweis).
+Zu jedem Code gibt es in `AI_ERROR_MESSAGES` einen deutschen `title` und einen `hint`. `pdf-not-supported`
+enthält die Anleitung „Wähle die Word-Datei deines Lebenslaufs oder öffne die PDF in Word und speichere
+sie als .docx“.
 
 ## Zustandsübergänge der Ansicht (Renderer, `useCvOptimization`)
 
 ```text
-idle ──(Datei/Text + Stelle gültig)──▶ ready
+idle ──(Quelle gewählt + Stelle gültig)──▶ ready
 ready ──(Optimieren, Zustimmung fehlt)──▶ consent ──(Zustimmen)──▶ running
                                               └──(Abbrechen)──▶ ready
 ready ──(Optimieren, Zustimmung vorhanden)──▶ running

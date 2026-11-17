@@ -19,9 +19,15 @@ Original, damit sichtbar wird, wie gut die Optimierung gewirkt hat.
   (Constitution v1.1.0). Netzwerkzugriff gibt es ausschließlich zum KI-Anbieter, nur mit gesetztem
   API-Key und nur, wenn der Nutzer die Optimierung ausdrücklich startet. Alles andere bleibt lokal.
 - Q: Welche KI-Anbieter? → A: Nur Anthropic Claude.
-- Q: Eingabe? → A: CV-Datei (PDF, DOCX, TXT) plus Stellenanzeige (aus einer Bewerbung oder eingefügt).
+- Q: Eingabe? → A: CV-Datei plus Stellenanzeige (aus einer Bewerbung oder eingefügt). Die Dateiformate
+  wurden später auf DOCX und ODT festgelegt (siehe unten).
 - Q: Vergleichsansicht? → A: Original + 3 Varianten nebeneinander, jeweils mit Match-Score 0–100,
   abgedeckten und fehlenden Keywords und den wichtigsten Änderungen.
+- Q: Muss das Design des CVs erhalten bleiben? → A: Ja. Die optimierte Variante wird als Datei im
+  Originaldesign ausgegeben, sonst müsste der Nutzer nacharbeiten.
+- Q: Wie wird mit PDF-Lebensläufen umgegangen? → A: Sie werden abgelehnt, mit einer Anleitung, die
+  Word-Datei zu wählen bzw. die PDF in Word zu öffnen und als DOCX zu speichern.
+- Q: Welche Formate? → A: DOCX rein → DOCX raus, ODT rein → ODT raus.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -53,21 +59,28 @@ zeigen „Key hinterlegt (…abcd)“. Die Datendatei enthält den Key nicht im 
 
 ### User Story 2 – Lebenslauf auf eine Stelle optimieren (Priority: P1)
 
-Als Bewerber öffne ich die Ansicht „CV-Optimierung“, wähle meine CV-Datei und eine Stellenanzeige (aus
-einer bestehenden Bewerbung oder als eingefügten Text) und starte die Optimierung. Ich erhalte drei
-Varianten: sachlich, wirkungsstark und ATS-optimiert.
+Als Bewerber öffne ich die Ansicht „CV-Optimierung“, wähle meinen Lebenslauf als Word- (DOCX) oder
+LibreOffice-Datei (ODT) und eine Stellenanzeige (aus einer bestehenden Bewerbung oder als eingefügten
+Text) und starte die Optimierung. Ich erhalte drei Varianten: sachlich, wirkungsstark und ATS-optimiert.
+Jede Variante behält das Design meiner Datei (Schriften, Farben, Spalten, Tabellen, Bilder). Nur die
+Formulierungen ändern sich.
 
-**Why this priority**: Das ist der Kernnutzen des Tickets.
+**Why this priority**: Das ist der Kernnutzen des Tickets. Ohne Design-Erhalt müsste der Nutzer jede
+Variante von Hand in seine Vorlage übertragen.
 
-**Independent Test**: Mit hinterlegtem Key eine TXT-CV und eine eingefügte Stellenanzeige wählen,
-„Optimieren“ klicken → nach kurzer Wartezeit erscheinen drei Varianten.
+**Independent Test**: Mit hinterlegtem Key eine gestaltete DOCX-CV und eine eingefügte Stellenanzeige
+wählen, „Optimieren“ klicken → drei Varianten erscheinen. Eine gespeicherte Variante sieht in Word
+genauso aus wie das Original, nur mit anderen Formulierungen.
 
 **Acceptance Scenarios**:
 
 1. **Given** kein Key hinterlegt, **When** ich die Ansicht öffne, **Then** ist „Optimieren“ deaktiviert
    und ein Hinweis führt direkt zu den Einstellungen.
-2. **Given** eine PDF-, DOCX- oder TXT-Datei, **When** ich sie auswähle, **Then** wird ihr Text lokal
-   ausgelesen und als Vorschau angezeigt, in der ich ihn korrigieren kann.
+2. **Given** eine DOCX- oder ODT-Datei, **When** ich sie auswähle, **Then** wird ihr Text lokal
+   ausgelesen und als Vorschau angezeigt (nur lesend; Korrekturen erfolgen in der Originaldatei).
+2a. **Given** eine PDF-Datei, **When** ich sie auswähle, **Then** wird sie nicht angenommen, und eine
+   Anleitung erklärt, die Word-Datei des CVs zu wählen oder die PDF in Word zu öffnen und als DOCX zu
+   speichern.
 3. **Given** eine bestehende Bewerbung mit ausgefülltem Feld „Stellenanzeige“, **When** ich sie wähle,
    **Then** wird deren Text übernommen. Ist das Feld leer, füge ich den Text ein und kann ihn mit
    „In Bewerbung speichern“ dort ablegen.
@@ -103,11 +116,15 @@ mit Score, Keywords und Änderungen. Die Score-Differenz zum Original ist bei je
    markiert.
 3. **Given** ein schmales Fenster (< 768 px), **Then** werden die Spalten als Tabs bzw. untereinander
    dargestellt, ohne horizontales Scrollen.
-4. **Given** eine Variante, **When** ich „Kopieren“ klicke, **Then** liegt ihr Text in der
-   Zwischenablage und ich erhalte eine Bestätigung.
-5. **Given** eine Variante und eine gewählte Bewerbung, **When** ich „Als Dokument speichern“ klicke,
-   **Then** wird die Variante als Dokument an dieser Bewerbung abgelegt und erscheint in deren
-   Dokumentliste.
+4. **Given** eine Variante, **When** ich „Speichern unter …“ klicke, **Then** wird sie als Datei im
+   Format und Design des Originals (DOCX bzw. ODT) gespeichert.
+5. **Given** eine Variante und eine gewählte Bewerbung, **When** ich „An Bewerbung speichern“ klicke,
+   **Then** wird die Datei im Originaldesign an dieser Bewerbung abgelegt, erscheint in deren
+   Dokumentliste und lässt sich dort direkt öffnen.
+6. **Given** eine Variante, **When** ich „Text kopieren“ klicke, **Then** liegt ihr reiner Text in der
+   Zwischenablage.
+7. **Given** eine Variante, deren Text deutlich länger ist als das Original (mehr als 15 %), **Then**
+   weist die Spalte darauf hin, dass das Layout (z. B. Seitenumbruch) geprüft werden sollte.
 
 ---
 
@@ -131,10 +148,17 @@ sichtbar.
 
 ### Edge Cases
 
-- Die CV-Datei enthält keinen auslesbaren Text (z. B. eingescanntes PDF) → Hinweis „Kein Text gefunden“
-  und Möglichkeit, Text manuell einzufügen.
-- Die CV-Datei ist beschädigt, passwortgeschützt oder hat einen nicht unterstützten Typ → deutsche
-  Fehlermeldung, keine Abstürze.
+- Die CV-Datei enthält keinen Text (z. B. nur ein eingefügtes Bild) → Hinweis „Kein Text gefunden“.
+- Die CV-Datei ist beschädigt, passwortgeschützt oder hat einen nicht unterstützten Typ (PDF, DOC, TXT …)
+  → deutsche Fehlermeldung mit Anleitung, keine Abstürze.
+- Die DOCX enthält nachverfolgte Änderungen → Hinweis, die Änderungen in Word erst anzunehmen oder
+  abzulehnen.
+- Text in Textfeldern, Tabellen und Seitenleisten wird mit optimiert. Kopf- und Fußzeilen bleiben
+  unverändert.
+- Ein Absatz besteht aus mehreren unterschiedlich formatierten Teilen (z. B. fettes „Skills:“ + normaler
+  Text) → die Formatierung jedes Teils bleibt erhalten.
+- Die KI liefert für einen Absatz eine unpassende Struktur → dieser Absatz bleibt unverändert, der Rest
+  wird übernommen.
 - CV und Stellenanzeige überschreiten zusammen die zulässige Länge → Meldung vor dem Senden, mit
   Angabe, wie viel gekürzt werden muss.
 - Die Stellenanzeige ist leer → die Optimierung ist nicht startbar, mit Hinweis.
@@ -175,8 +199,14 @@ sichtbar.
 
 - **FR-010**: Die App MUSS eine eigene Ansicht „CV-Optimierung“ bieten, die über die Hauptnavigation
   erreichbar ist.
-- **FR-011**: Der Nutzer MUSS eine CV-Datei vom Typ PDF, DOCX oder TXT wählen können. Ihr Text MUSS
-  lokal ausgelesen und als bearbeitbare Vorschau angezeigt werden.
+- **FR-011**: Der Nutzer MUSS eine CV-Datei vom Typ DOCX oder ODT wählen können (Dialog oder Drag &
+  Drop). Ihr Text MUSS lokal ausgelesen und als Vorschau angezeigt werden. PDF und andere Formate MÜSSEN
+  mit einer Anleitung abgelehnt werden.
+- **FR-011a**: Jede Variante MUSS das Design der Originaldatei vollständig erhalten. Geändert wird nur der
+  Text vorhandener Absätze. Formatierung, Absätze, Reihenfolge, Tabellen, Textfelder, Bilder, Kopf- und
+  Fußzeilen bleiben unverändert. Unterschiedlich formatierte Teile innerhalb eines Absatzes behalten
+  jeweils ihre Formatierung.
+- **FR-011b**: Die Varianten DÜRFEN keine Absätze hinzufügen, entfernen oder umsortieren.
 - **FR-012**: Der Nutzer MUSS die Stellenanzeige aus einer bestehenden Bewerbung übernehmen oder als
   Text einfügen können.
 - **FR-012a**: Bewerbungen MÜSSEN ein neues optionales Textfeld „Stellenanzeige“ erhalten, das im
@@ -202,11 +232,14 @@ sichtbar.
 - **FR-020**: Die Variante mit dem höchsten Score MUSS hervorgehoben werden.
 - **FR-021**: Unter 768 px Fensterbreite MÜSSEN die Spalten als Tabs oder gestapelt dargestellt
   werden. Ab 360 px gibt es kein horizontales Scrollen.
-- **FR-022**: Jede Variante MUSS in die Zwischenablage kopiert werden können.
-- **FR-023**: Ist eine Bewerbung gewählt, MUSS jede Variante als Dokument an diese Bewerbung gespeichert
-  werden können.
-- **FR-024**: Das letzte Ergebnis MUSS lokal gespeichert werden und nach einem Neustart abrufbar und
-  löschbar sein.
+- **FR-022**: Jede Variante MUSS als Datei im Format und Design des Originals gespeichert werden können
+  („Speichern unter …“). Ihr reiner Text MUSS zusätzlich kopierbar sein.
+- **FR-023**: Ist eine Bewerbung gewählt, MUSS jede Variante als Datei im Originaldesign an diese
+  Bewerbung gespeichert werden können.
+- **FR-023a**: Ist der Text einer Variante mehr als 15 % länger als das Original, MUSS ein Hinweis zur
+  Layout-Prüfung erscheinen.
+- **FR-024**: Das letzte Ergebnis MUSS lokal gespeichert werden (einschließlich der Originaldatei) und nach
+  einem Neustart abrufbar, als Datei speicherbar und löschbar sein.
 
 **Barrierefreiheit**
 
@@ -218,7 +251,9 @@ sichtbar.
 - **KI-Einstellungen**: Ob ein Key hinterlegt ist, die letzten 4 Zeichen und die Datenschutz-Zustimmung
   (ja/nein, Datum). Der verschlüsselte Key selbst liegt getrennt von den übrigen App-Daten.
 - **Bewerbung (erweitert)**: erhält das optionale Feld „Stellenanzeige“ (Freitext).
-- **Optimierungsauftrag**: CV-Text, Stellenanzeige-Text, optional die zugehörige Bewerbung.
+- **CV-Quelle**: die gewählte Originaldatei (DOCX/ODT) mit ihren Absätzen; jeder Absatz besteht aus
+  einem oder mehreren Textteilen mit eigener Formatierung.
+- **Optimierungsauftrag**: CV-Quelle, Stellenanzeige-Text, optional die zugehörige Bewerbung.
 - **Bewertung**: Score 0–100, abgedeckte Keywords, fehlende Keywords.
 - **Variante**: Stil (sachlich / wirkungsstark / ATS-optimiert), Text, Bewertung, Liste der wichtigsten
   Änderungen.
@@ -242,19 +277,24 @@ sichtbar.
   einer leeren Ansicht.
 - **SC-007**: Die Testabdeckung bleibt bei ≥ 90 %, ohne dass für automatisierte Tests echte Anfragen
   gesendet werden.
+- **SC-008**: Eine gespeicherte Variante öffnet sich fehlerfrei in Word bzw. LibreOffice und unterscheidet
+  sich vom Original ausschließlich im Text: gleiche Absatzanzahl, gleiche Formatierungen, gleiche Bilder
+  und Tabellen. Der Nutzer muss am Layout nichts nacharbeiten, solange die Textlänge vergleichbar bleibt.
 
 ## Assumptions
 
 - Der Nutzer besitzt ein eigenes Anthropic-Konto und trägt die Kosten der Anfragen selbst. Die App zeigt
   keine Kosten an.
-- Varianten werden als reiner Text bzw. mit einfacher Gliederung erzeugt. Das Layout der Original-Datei
-  (Spalten, Fotos, Design) wird nicht nachgebaut. „Als Dokument speichern“ legt eine Textdatei ab.
-  Ein gestalteter DOCX- oder PDF-Export ist nicht Teil dieses Tickets.
+- Varianten werden durch Austausch des Texts in der Originaldatei erzeugt, nicht durch Nachbau des
+  Layouts. Eine PDF-Ausgabe ist nicht Teil dieses Tickets; der Nutzer exportiert bei Bedarf selbst aus
+  Word bzw. LibreOffice.
+- Da Absätze nicht hinzugefügt werden, kann die KI Inhalte nur umformulieren und gewichten, nicht
+  ergänzen. Das ist gewollt (kein Erfinden von Inhalten, Layout bleibt stabil).
+- Alte Word-Formate (.doc), Pages und PDF werden nicht unterstützt.
 - Der Score wird von der KI nach einem festen, im Auftrag beschriebenen Bewertungsschema vergeben. Er
   ist ein Orientierungswert, keine Garantie für ATS-Systeme.
 - CV und Stellenanzeigen sind überwiegend deutsch. Die Varianten werden in der Sprache des Original-CVs
   erzeugt.
 - Es wird nur das letzte Ergebnis gespeichert, keine vollständige Historie.
-- Eingescannte PDFs ohne Textebene werden nicht per Texterkennung verarbeitet.
 - Issue #8 (Anschreiben-Optimierung) soll später denselben Key und dieselbe Anbindung nutzen. Die
   Anbindung wird deshalb nicht CV-spezifisch gebaut, ist aber nicht Teil dieses Tickets.

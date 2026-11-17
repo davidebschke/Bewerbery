@@ -34,5 +34,6 @@
 - Bewusste Ausnahme: Anthropic als Anbieter wird genannt, weil es eine Produktentscheidung des
   Nutzers ist (Session 2026-11-17), kein Implementierungsdetail.
 - FR-009 (Constitution v1.1.0) ist eine Governance-Anforderung und muss vor der Umsetzung erledigt sein.
-- Scope-Grenzen: kein gestalteter DOCX/PDF-Export, keine OCR, keine Historie, kein zweiter Anbieter,
-  Issue #8 nicht enthalten.
+- Scope-Grenzen: Ein- und Ausgabe nur DOCX und ODT (Design-Erhalt durch Textaustausch). Kein PDF (weder
+  Ein- noch Ausgabe), keine Historie, kein zweiter Anbieter, Issue #8 nicht enthalten.
+- Überarbeitet am 2026-11-17: Design-Erhalt als Pflicht aufgenommen (FR-011a/b, FR-023a, SC-008).
