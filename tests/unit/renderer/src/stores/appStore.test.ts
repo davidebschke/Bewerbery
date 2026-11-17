@@ -19,6 +19,20 @@ beforeEach(() => {
 })
 
 describe('appStore', () => {
+  it('attaches a stored document to an existing application', () => {
+    const existing = makeDocument('alt.pdf')
+    const app = makeApplication({ id: 'a1', documents: [existing] })
+    useAppStore.setState({ data: makeData({ applications: [app] }), status: 'ready' })
+
+    const variant = makeDocument('Lebenslauf – ATS-optimiert.docx')
+    store().attachDocument('a1', variant)
+    expect(store().data.applications[0].documents).toEqual([existing, variant])
+    expect(api.saveData).toHaveBeenCalledTimes(1)
+
+    store().attachDocument('fehlt', variant)
+    expect(api.saveData).toHaveBeenCalledTimes(1)
+  })
+
   it('stores the job description of an existing application', () => {
     const app = makeApplication({ id: 'a1' })
     useAppStore.setState({ data: makeData({ applications: [app] }), status: 'ready' })

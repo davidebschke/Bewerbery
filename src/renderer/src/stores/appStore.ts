@@ -61,6 +61,8 @@ export interface AppState {
   deleteApplication(id: string): Promise<void>
   markFollowedUp(id: string): void
   setStage(id: string, stage: Stage, appointmentAt?: string | null): void
+  /** Hängt ein bereits gespeichertes Dokument (z. B. eine CV-Variante) an eine Bewerbung */
+  attachDocument(id: string, document: ApplicationDocument): void
   /** Speichert die Stellenanzeige einer Bewerbung (z. B. aus der CV-Optimierung) */
   setJobDescription(id: string, text: string): void
   updateSettings(patch: Partial<Settings>): void
@@ -199,6 +201,11 @@ export const useAppStore = create<AppState>()((set, get) => {
         }
       }
       persist(data)
+    },
+
+    attachDocument(id, document) {
+      if (!get().data.applications.some((app) => app.id === id)) return
+      persist(mapApplication(id, (app) => ({ ...app, documents: [...app.documents, document] })))
     },
 
     setJobDescription(id, text) {
