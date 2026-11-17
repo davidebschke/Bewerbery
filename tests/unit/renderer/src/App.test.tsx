@@ -27,6 +27,26 @@ describe('App', () => {
     expect(await screen.findByText('Deine Jobsuche startet hier')).toBeInTheDocument()
   })
 
+  it('switches between applications and cv optimization', async () => {
+    renderWith()
+    await screen.findByText('Deine Jobsuche startet hier')
+    const nav = screen.getByRole('navigation', { name: 'Bereiche' })
+    const applications = within(nav).getByRole('button', { name: /Bewerbungen/ })
+    const cv = within(nav).getByRole('button', { name: /CV/ })
+    expect(applications).toHaveAttribute('aria-current', 'page')
+
+    await userEvent.click(cv)
+    expect(cv).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('heading', { name: 'CV-Optimierung' })).toBeInTheDocument()
+    expect(screen.queryByText('Deine Jobsuche startet hier')).not.toBeInTheDocument()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Zu den Einstellungen' }))
+    expect(screen.getByRole('dialog', { name: 'Einstellungen' })).toBeInTheDocument()
+
+    await userEvent.click(applications)
+    expect(screen.getByText('Deine Jobsuche startet hier')).toBeInTheDocument()
+  })
+
   it('shows load errors and retries', async () => {
     api = installMockApi()
     api.loadData.mockRejectedValueOnce(new Error('Datei gesperrt'))
