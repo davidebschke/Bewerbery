@@ -3,6 +3,7 @@ import type { Theme } from '@shared/types'
 import { Dialog } from '../../components/ui/Dialog'
 import { cn } from '../../lib/cn'
 import { useAppStore } from '../../stores/appStore'
+import { AiKeySection } from './AiKeySection'
 
 const THEMES: { value: Theme; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -90,6 +91,10 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose(): vo
             ))}
           </div>
         </fieldset>
+
+        <div className="border-t border-line pt-6">
+          <AiKeySection />
+        </div>
       </div>
     </Dialog>
   )
