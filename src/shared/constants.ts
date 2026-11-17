@@ -11,6 +11,9 @@ export const MAX_IMPORT_FILE_BYTES = 5 * 1024 * 1024
 export const MAX_IMPORT_ROWS = 5000
 export const MAX_IMPORT_COLUMNS = 200
 
+/** Maximale Länge der Stellenanzeige an einer Bewerbung (Zeichen) */
+export const MAX_JOB_DESCRIPTION_CHARS = 15_000
+
 /** Ab diesem Anteil der Frist gilt eine Bewerbung als „bald fällig“ */
 export const SOON_THRESHOLD = 0.6
 

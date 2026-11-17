@@ -74,6 +74,19 @@ describe('schemas', () => {
       ],
     })
     expect(data.applications[0].position).toBe('')
+    expect(data.applications[0].jobDescription).toBe('')
+  })
+
+  it('accepts a job description up to 15 000 characters', () => {
+    const base = { company: 'A', position: 'P', sentAt: '2026-09-01' }
+    const ok = applicationInputSchema.safeParse({ ...base, jobDescription: 'x'.repeat(15_000) })
+    expect(ok.success).toBe(true)
+    const tooLong = applicationInputSchema.safeParse({
+      ...base,
+      jobDescription: 'x'.repeat(15_001),
+    })
+    expect(tooLong.success).toBe(false)
+    expect(tooLong.error!.issues[0].message).toBe('Stellenanzeige ist zu lang')
   })
 
   it('limits follow-up weeks to 1..12', () => {
