@@ -21,6 +21,10 @@ export const api: BewerberyApi = {
   setAiKey: (apiKey) => ipcRenderer.invoke(IPC.setAiKey, apiKey),
   testAiKey: (apiKey) => ipcRenderer.invoke(IPC.testAiKey, apiKey),
   removeAiKey: () => ipcRenderer.invoke(IPC.removeAiKey),
+  pickCvFile: () => ipcRenderer.invoke(IPC.pickCvFile),
+  readCvFile: (filePath) => ipcRenderer.invoke(IPC.readCvFile, filePath),
+  optimizeCv: (request) => ipcRenderer.invoke(IPC.optimizeCv, request),
+  cancelCvOptimization: () => ipcRenderer.invoke(IPC.cancelCvOptimization),
 }
 
 contextBridge.exposeInMainWorld('api', api)

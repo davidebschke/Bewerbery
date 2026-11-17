@@ -1,5 +1,10 @@
 import type { AiResult } from './domain/cv/aiErrors'
-import type { AiKeyStatus } from './domain/cv/schemas'
+import type {
+  AiKeyStatus,
+  CvOptimizationRequest,
+  CvOptimizationResult,
+  CvSource,
+} from './domain/cv/schemas'
 import type { TemplateFormat } from './domain/import/template'
 import type { AppData, ApplicationDocument, ImportWorkbook } from './types'
 
@@ -18,6 +23,10 @@ export const IPC = {
   setAiKey: 'ai:set-key',
   testAiKey: 'ai:test-key',
   removeAiKey: 'ai:remove-key',
+  pickCvFile: 'cv:pick-file',
+  readCvFile: 'cv:read-file',
+  optimizeCv: 'cv:optimize',
+  cancelCvOptimization: 'cv:cancel',
 } as const
 
 export interface PdfExportOutcome {
@@ -49,4 +58,11 @@ export interface BewerberyApi {
   /** Ohne Argument wird der gespeicherte Key geprüft */
   testAiKey(apiKey?: string): Promise<AiResult<true>>
   removeAiKey(): Promise<AiKeyStatus>
+
+  // CV-Optimierung
+  /** Lebenslauf (DOCX/ODT) wählen; `null` = Dialog abgebrochen */
+  pickCvFile(): Promise<AiResult<CvSource> | null>
+  readCvFile(filePath: string): Promise<AiResult<CvSource>>
+  optimizeCv(request: CvOptimizationRequest): Promise<AiResult<CvOptimizationResult>>
+  cancelCvOptimization(): Promise<void>
 }

@@ -67,4 +67,21 @@ describe('preload api', () => {
       [IPC.removeAiKey],
     ])
   })
+
+  it('forwards cv optimization calls to their IPC channels', async () => {
+    const { api } = await import('../../../src/preload/index')
+    const request = { jobDescription: 'React', applicationId: null, jobTitle: '' }
+
+    await api.pickCvFile()
+    await api.readCvFile('C:/cv.docx')
+    await api.optimizeCv(request)
+    await api.cancelCvOptimization()
+
+    expect(invoke.mock.calls).toEqual([
+      [IPC.pickCvFile],
+      [IPC.readCvFile, 'C:/cv.docx'],
+      [IPC.optimizeCv, request],
+      [IPC.cancelCvOptimization],
+    ])
+  })
 })

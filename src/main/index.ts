@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { BrowserWindow, Notification, app, dialog, ipcMain, safeStorage, shell } from 'electron'
 import { DOCUMENTS_DIR_NAME } from '@shared/constants'
@@ -6,6 +7,8 @@ import type { AppData } from '@shared/types'
 import { createAiClient } from './ai/claudeClient'
 import { createFakeAiClient, fakeCrypto, isAiFakeMode } from './ai/fakeAi'
 import { createSecretStore, type SecretCrypto } from './ai/secretStore'
+import { CV_EXTENSIONS } from './cv/cvDocument'
+import { createCvService } from './cv/cvService'
 import { createDocumentService } from './documents/documentService'
 import { createImportService, IMPORT_EXTENSIONS } from './import/importService'
 import { registerIpc } from './ipc/registerIpc'
@@ -59,6 +62,8 @@ app.setAppUserModelId('de.ebschke.bewerbery')
 
 app.whenReady().then(() => {
   const userData = app.getPath('userData')
+  const secrets = createSecretStore(userData, aiFake ? fakeCrypto : osCrypto)
+  const ai = aiFake ? createFakeAiClient() : createAiClient()
   const reminders = createReminderService(({ title, body }) => {
     if (Notification.isSupported()) new Notification({ title, body }).show()
   })
@@ -93,8 +98,23 @@ app.whenReady().then(() => {
         return result.canceled || !result.filePath ? null : result.filePath
       },
     }),
-    secrets: createSecretStore(userData, aiFake ? fakeCrypto : osCrypto),
-    ai: aiFake ? createFakeAiClient() : createAiClient(),
+    secrets,
+    ai,
+    cv: createCvService({
+      dir: userData,
+      secrets,
+      ai,
+      now: () => new Date(),
+      newId: () => randomUUID(),
+    }),
+    pickCvFile: async () => {
+      const result = await dialog.showOpenDialog({
+        title: 'Lebenslauf wählen',
+        properties: ['openFile'],
+        filters: [{ name: 'Lebenslauf (DOCX, ODT)', extensions: [...CV_EXTENSIONS] }],
+      })
+      return result.canceled ? null : (result.filePaths[0] ?? null)
+    },
     pickFiles: async () => {
       const result = await dialog.showOpenDialog({
         title: 'Dokumente hinzufügen',

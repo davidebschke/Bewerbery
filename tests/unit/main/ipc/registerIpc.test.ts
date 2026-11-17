@@ -4,7 +4,9 @@ import { makeApplication, makeData } from '@shared/testing/fixtures'
 import type { ApplicationDocument } from '@shared/types'
 import type { AiClient } from '../../../../src/main/ai/claudeClient'
 import type { SecretStore } from '../../../../src/main/ai/secretStore'
+import type { CvService } from '../../../../src/main/cv/cvService'
 import type { DocumentService } from '../../../../src/main/documents/documentService'
+import { makeCvResult, makeCvSource } from '../../../../src/shared/testing/cvFixtures'
 import type { ImportService } from '../../../../src/main/import/importService'
 import type { PdfExportService } from '../../../../src/main/pdf/pdfExportService'
 import type { DataStore } from '../../../../src/main/storage/dataStore'
@@ -54,6 +56,12 @@ function setup(overrides: Partial<IpcDeps> = {}) {
     generateVariant: vi.fn(),
     assessAll: vi.fn(),
   }
+  const cv: CvService = {
+    loadSource: vi.fn(async () => ({ ok: true as const, value: makeCvSource() })),
+    optimize: vi.fn(async () => ({ ok: true as const, value: makeCvResult() })),
+    cancel: vi.fn(),
+    isRunning: vi.fn(() => false),
+  }
   const deps: IpcDeps = {
     ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
     dataStore,
@@ -62,6 +70,8 @@ function setup(overrides: Partial<IpcDeps> = {}) {
     importer,
     secrets,
     ai,
+    cv,
+    pickCvFile: vi.fn(async () => 'C:/Lebenslauf.docx'),
     pickFiles: vi.fn(async () => ['C:/cv.pdf']),
     openPath: vi.fn(async () => ''),
     now: () => new Date('2026-09-23T00:00:00.000Z'),
@@ -70,7 +80,19 @@ function setup(overrides: Partial<IpcDeps> = {}) {
   }
   registerIpc(deps)
   const invoke = (channel: string, ...args: unknown[]) => handlers.get(channel)!({}, ...args)
-  return { deps, dataStore, documents, pdfExport, importer, secrets, ai, invoke, data, handlers }
+  return {
+    deps,
+    dataStore,
+    documents,
+    pdfExport,
+    importer,
+    secrets,
+    ai,
+    cv,
+    invoke,
+    data,
+    handlers,
+  }
 }
 
 const STORED_KEY = 'sk-ant-api03-gespeicherter-schluessel-wxyz'
@@ -202,10 +224,40 @@ describe('registerIpc', () => {
       expect(ai.testKey).not.toHaveBeenCalled()
     })
 
-    it('removes the key', async () => {
-      const { invoke, secrets } = setup()
+    it('removes the key and cancels a running optimization', async () => {
+      const { invoke, secrets, cv } = setup()
       expect(await invoke(IPC.removeAiKey)).toMatchObject({ configured: false, hint: null })
       expect(secrets.remove).toHaveBeenCalled()
+      expect(cv.cancel).toHaveBeenCalled()
+    })
+  })
+
+  describe('cv optimization', () => {
+    it('picks and reads a cv file', async () => {
+      const { invoke, cv } = setup()
+      expect(await invoke(IPC.pickCvFile)).toEqual({ ok: true, value: makeCvSource() })
+      expect(cv.loadSource).toHaveBeenCalledWith('C:/Lebenslauf.docx')
+
+      await invoke(IPC.readCvFile, 'C:/drop/cv.odt')
+      expect(cv.loadSource).toHaveBeenLastCalledWith('C:/drop/cv.odt')
+      expect(() => invoke(IPC.readCvFile, '')).toThrow()
+    })
+
+    it('returns null when the cv dialog is cancelled', async () => {
+      const { invoke, cv } = setup({ pickCvFile: vi.fn(async () => null) })
+      expect(await invoke(IPC.pickCvFile)).toBeNull()
+      expect(cv.loadSource).not.toHaveBeenCalled()
+    })
+
+    it('optimizes with a validated request and cancels on demand', async () => {
+      const { invoke, cv } = setup()
+      const request = { jobDescription: '  React  ', applicationId: null, jobTitle: 'Dev' }
+      expect(await invoke(IPC.optimizeCv, request)).toEqual({ ok: true, value: makeCvResult() })
+      expect(cv.optimize).toHaveBeenCalledWith({ ...request, jobDescription: 'React' })
+      expect(() => invoke(IPC.optimizeCv, { ...request, jobDescription: ' ' })).toThrow()
+
+      invoke(IPC.cancelCvOptimization)
+      expect(cv.cancel).toHaveBeenCalled()
     })
   })
 })

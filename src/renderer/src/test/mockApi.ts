@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 import type { AiKeyStatus } from '@shared/domain/cv/schemas'
 import { createEmptyData } from '@shared/domain/factory'
 import type { BewerberyApi } from '@shared/ipc'
+import { makeCvResult, makeCvSource } from '@shared/testing/cvFixtures'
 import type { AppData, ApplicationDocument } from '@shared/types'
 
 const noKey: AiKeyStatus = { configured: false, hint: null, encryptionAvailable: true }
@@ -40,6 +41,10 @@ export function installMockApi(data: AppData = createEmptyData()): MockApi {
     })),
     testAiKey: vi.fn(async () => ({ ok: true, value: true })),
     removeAiKey: vi.fn(async () => noKey),
+    pickCvFile: vi.fn(async () => ({ ok: true, value: makeCvSource() })),
+    readCvFile: vi.fn(async () => ({ ok: true, value: makeCvSource() })),
+    optimizeCv: vi.fn(async () => ({ ok: true, value: makeCvResult() })),
+    cancelCvOptimization: vi.fn(async () => undefined),
   } as unknown as MockApi
   window.api = api
   return api
