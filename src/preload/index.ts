@@ -17,6 +17,10 @@ export const api: BewerberyApi = {
   pickImportFile: () => ipcRenderer.invoke(IPC.pickImportFile),
   saveImportTemplate: (format) => ipcRenderer.invoke(IPC.saveImportTemplate, format),
   getPathForFile: (file) => webUtils.getPathForFile(file),
+  getAiKeyStatus: () => ipcRenderer.invoke(IPC.getAiKeyStatus),
+  setAiKey: (apiKey) => ipcRenderer.invoke(IPC.setAiKey, apiKey),
+  testAiKey: (apiKey) => ipcRenderer.invoke(IPC.testAiKey, apiKey),
+  removeAiKey: () => ipcRenderer.invoke(IPC.removeAiKey),
 }
 
 contextBridge.exposeInMainWorld('api', api)

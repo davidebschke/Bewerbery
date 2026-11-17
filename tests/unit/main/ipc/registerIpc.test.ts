@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { IPC } from '@shared/ipc'
 import { makeApplication, makeData } from '@shared/testing/fixtures'
 import type { ApplicationDocument } from '@shared/types'
+import type { AiClient } from '../../../../src/main/ai/claudeClient'
+import type { SecretStore } from '../../../../src/main/ai/secretStore'
 import type { DocumentService } from '../../../../src/main/documents/documentService'
 import type { ImportService } from '../../../../src/main/import/importService'
 import type { PdfExportService } from '../../../../src/main/pdf/pdfExportService'
@@ -41,12 +43,21 @@ function setup(overrides: Partial<IpcDeps> = {}) {
     pickWorkbook: vi.fn(async () => ({ fileName: 'a.csv', sheets: [] })),
     saveTemplate: vi.fn(async () => ({ canceled: false, filePath: 'C:/vorlage.ods' })),
   }
+  const secrets: SecretStore = {
+    status: vi.fn(async () => keyStatus),
+    set: vi.fn(async () => ({ ok: true as const, value: keyStatus })),
+    get: vi.fn(async () => STORED_KEY),
+    remove: vi.fn(async () => ({ ...keyStatus, configured: false, hint: null })),
+  }
+  const ai: AiClient = { testKey: vi.fn(async () => ({ ok: true as const, value: true as const })) }
   const deps: IpcDeps = {
     ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
     dataStore,
     documents,
     pdfExport,
     importer,
+    secrets,
+    ai,
     pickFiles: vi.fn(async () => ['C:/cv.pdf']),
     openPath: vi.fn(async () => ''),
     now: () => new Date('2026-09-23T00:00:00.000Z'),
@@ -55,8 +66,12 @@ function setup(overrides: Partial<IpcDeps> = {}) {
   }
   registerIpc(deps)
   const invoke = (channel: string, ...args: unknown[]) => handlers.get(channel)!({}, ...args)
-  return { deps, dataStore, documents, pdfExport, importer, invoke, data, handlers }
+  return { deps, dataStore, documents, pdfExport, importer, secrets, ai, invoke, data, handlers }
 }
+
+const STORED_KEY = 'sk-ant-api03-gespeicherter-schluessel-wxyz'
+const NEW_KEY = 'sk-ant-api03-neuer-schluessel-abcd'
+const keyStatus = { configured: true, hint: 'wxyz', encryptionAvailable: true }
 
 describe('registerIpc', () => {
   it('registers all channels', () => {
@@ -149,5 +164,44 @@ describe('registerIpc', () => {
   it('validates the application ids for the pdf export', async () => {
     const { invoke } = setup()
     await expect(invoke(IPC.exportApplicationsPdf, 'not-an-array')).rejects.toThrow()
+  })
+
+  describe('ai key', () => {
+    it('returns the key status without the key itself', async () => {
+      const { invoke } = setup()
+      const status = await invoke(IPC.getAiKeyStatus)
+      expect(status).toEqual(keyStatus)
+      expect(JSON.stringify(status)).not.toContain(STORED_KEY)
+    })
+
+    it('stores a validated, trimmed key', async () => {
+      const { invoke, secrets } = setup()
+      expect(await invoke(IPC.setAiKey, `  ${NEW_KEY}  `)).toEqual({ ok: true, value: keyStatus })
+      expect(secrets.set).toHaveBeenCalledWith(NEW_KEY)
+      expect(() => invoke(IPC.setAiKey, 'kurz')).toThrow()
+      expect(() => invoke(IPC.setAiKey, 42)).toThrow()
+    })
+
+    it('tests a given key or falls back to the stored key', async () => {
+      const { invoke, ai } = setup()
+      expect(await invoke(IPC.testAiKey, NEW_KEY)).toEqual({ ok: true, value: true })
+      expect(ai.testKey).toHaveBeenLastCalledWith(NEW_KEY)
+      await invoke(IPC.testAiKey)
+      expect(ai.testKey).toHaveBeenLastCalledWith(STORED_KEY)
+      await expect(invoke(IPC.testAiKey, 'kurz')).rejects.toThrow()
+    })
+
+    it('reports a missing key when testing without a stored key', async () => {
+      const { invoke, secrets, ai } = setup()
+      vi.mocked(secrets.get).mockResolvedValueOnce(null)
+      expect(await invoke(IPC.testAiKey)).toEqual({ ok: false, error: 'no-key' })
+      expect(ai.testKey).not.toHaveBeenCalled()
+    })
+
+    it('removes the key', async () => {
+      const { invoke, secrets } = setup()
+      expect(await invoke(IPC.removeAiKey)).toMatchObject({ configured: false, hint: null })
+      expect(secrets.remove).toHaveBeenCalled()
+    })
   })
 })

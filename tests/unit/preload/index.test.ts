@@ -49,4 +49,22 @@ describe('preload api', () => {
     ])
     expect(api.getPathForFile({} as File)).toBe('C:/file.pdf')
   })
+
+  it('forwards ai key calls to their IPC channels', async () => {
+    const { api } = await import('../../../src/preload/index')
+
+    await api.getAiKeyStatus()
+    await api.setAiKey('key')
+    await api.testAiKey()
+    await api.testAiKey('key')
+    await api.removeAiKey()
+
+    expect(invoke.mock.calls).toEqual([
+      [IPC.getAiKeyStatus],
+      [IPC.setAiKey, 'key'],
+      [IPC.testAiKey, undefined],
+      [IPC.testAiKey, 'key'],
+      [IPC.removeAiKey],
+    ])
+  })
 })

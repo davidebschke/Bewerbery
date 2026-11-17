@@ -1,3 +1,5 @@
+import type { AiResult } from './domain/cv/aiErrors'
+import type { AiKeyStatus } from './domain/cv/schemas'
 import type { TemplateFormat } from './domain/import/template'
 import type { AppData, ApplicationDocument, ImportWorkbook } from './types'
 
@@ -12,6 +14,10 @@ export const IPC = {
   exportApplicationsPdf: 'pdf:export-applications',
   pickImportFile: 'import:pick-file',
   saveImportTemplate: 'import:save-template',
+  getAiKeyStatus: 'ai:key-status',
+  setAiKey: 'ai:set-key',
+  testAiKey: 'ai:test-key',
+  removeAiKey: 'ai:remove-key',
 } as const
 
 export interface PdfExportOutcome {
@@ -36,4 +42,11 @@ export interface BewerberyApi {
   pickImportFile(): Promise<ImportWorkbook | null>
   saveImportTemplate(format: TemplateFormat): Promise<FileSaveOutcome>
   getPathForFile(file: File): string
+
+  // KI-Assistent – der API-Key selbst wird nie zurückgegeben
+  getAiKeyStatus(): Promise<AiKeyStatus>
+  setAiKey(apiKey: string): Promise<AiResult<AiKeyStatus>>
+  /** Ohne Argument wird der gespeicherte Key geprüft */
+  testAiKey(apiKey?: string): Promise<AiResult<true>>
+  removeAiKey(): Promise<AiKeyStatus>
 }

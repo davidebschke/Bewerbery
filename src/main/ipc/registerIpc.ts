@@ -1,8 +1,12 @@
 import { z } from 'zod'
 import { IPC } from '@shared/ipc'
+import { fail } from '@shared/domain/cv/aiErrors'
+import { apiKeySchema } from '@shared/domain/cv/schemas'
 import { TEMPLATE_FORMATS } from '@shared/domain/import/template'
 import { applicationDocumentSchema } from '@shared/schemas'
 import type { AppData } from '@shared/types'
+import type { AiClient } from '../ai/claudeClient'
+import type { SecretStore } from '../ai/secretStore'
 import type { DocumentService } from '../documents/documentService'
 import type { ImportService } from '../import/importService'
 import type { PdfExportService } from '../pdf/pdfExportService'
@@ -16,6 +20,9 @@ export interface IpcDeps {
   documents: DocumentService
   pdfExport: PdfExportService
   importer: ImportService
+  /** Verschlüsselt gespeicherter Anthropic-API-Key */
+  secrets: SecretStore
+  ai: AiClient
   /** Öffnet einen Dateiauswahldialog und liefert die gewählten Pfade */
   pickFiles(): Promise<string[]>
   /** Öffnet eine Datei mit dem Standardprogramm, liefert Fehlermeldung oder '' */
@@ -83,4 +90,17 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle(IPC.saveImportTemplate, (_event, format) =>
     deps.importer.saveTemplate(templateFormatSchema.parse(format)),
   )
+
+  // KI-Assistent: Kein Handler gibt den API-Key zurück
+  ipcMain.handle(IPC.getAiKeyStatus, () => deps.secrets.status())
+
+  ipcMain.handle(IPC.setAiKey, (_event, apiKey) => deps.secrets.set(apiKeySchema.parse(apiKey)))
+
+  ipcMain.handle(IPC.testAiKey, async (_event, apiKey) => {
+    const key = apiKey === undefined ? await deps.secrets.get() : apiKeySchema.parse(apiKey)
+    if (!key) return fail('no-key')
+    return deps.ai.testKey(key)
+  })
+
+  ipcMain.handle(IPC.removeAiKey, () => deps.secrets.remove())
 }

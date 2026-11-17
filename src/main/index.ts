@@ -1,8 +1,11 @@
 import { join } from 'node:path'
-import { BrowserWindow, Notification, app, dialog, ipcMain, shell } from 'electron'
+import { BrowserWindow, Notification, app, dialog, ipcMain, safeStorage, shell } from 'electron'
 import { DOCUMENTS_DIR_NAME } from '@shared/constants'
 import { TEMPLATE_FORMAT_LABELS } from '@shared/domain/import/template'
 import type { AppData } from '@shared/types'
+import { createAiClient } from './ai/claudeClient'
+import { createFakeAiClient, fakeCrypto, isAiFakeMode } from './ai/fakeAi'
+import { createSecretStore, type SecretCrypto } from './ai/secretStore'
 import { createDocumentService } from './documents/documentService'
 import { createImportService, IMPORT_EXTENSIONS } from './import/importService'
 import { registerIpc } from './ipc/registerIpc'
@@ -18,6 +21,17 @@ if (process.env.BEWERBERY_USER_DATA) app.setPath('userData', process.env.BEWERBE
 
 let mainWindow: BrowserWindow | null = null
 let latestData: AppData | null = null
+
+const aiFake = isAiFakeMode(process.env)
+
+/** OS-Verschlüsselung; unter Linux ohne Schlüsselbund (`basic_text`) gilt sie als nicht verfügbar */
+const osCrypto: SecretCrypto = {
+  isEncryptionAvailable: () =>
+    safeStorage.isEncryptionAvailable() &&
+    !(process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text'),
+  encryptString: (text) => safeStorage.encryptString(text),
+  decryptString: (buffer) => safeStorage.decryptString(buffer),
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow(createWindowOptions(join(__dirname, '../preload')))
@@ -79,6 +93,8 @@ app.whenReady().then(() => {
         return result.canceled || !result.filePath ? null : result.filePath
       },
     }),
+    secrets: createSecretStore(userData, aiFake ? fakeCrypto : osCrypto),
+    ai: aiFake ? createFakeAiClient() : createAiClient(),
     pickFiles: async () => {
       const result = await dialog.showOpenDialog({
         title: 'Dokumente hinzufügen',
