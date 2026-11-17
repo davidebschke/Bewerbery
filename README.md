@@ -208,6 +208,10 @@ Die Testdateien für den Tabellen-Import liegen unter `tests/fixtures/import/` (
 erwartete Ergebnisse in der dortigen README). Sie eignen sich auch zum manuellen Ausprobieren in der
 App. Neu erzeugen (benötigt LibreOffice): `node scripts/generate-import-samples.mjs`.
 
+Beispiel-Lebensläufe aus Softwareentwicklung und AI-Engineering mit passenden Stellenanzeigen liegen
+unter `tests/fixtures/cv/samples/` (Kombinationen und Prüfhinweise in der dortigen README). Neu
+erzeugen (benötigt LibreOffice): `node scripts/generate-cv-samples.mjs`.
+
 Kein Test sendet echte Anfragen an Anthropic: Unit-Tests ersetzen den Claude-Client durch Fakes, die
 E2E-Tests starten die App mit `BEWERBERY_AI_FAKE=1` (deterministische Varianten und Scores, Key-Ablage
 ohne OS-Verschlüsselung). Ein Test stellt sicher, dass das Anthropic-SDK nur unter `src/main/ai/`
@@ -450,6 +454,10 @@ A Husky pre-commit hook automatically runs typecheck, lint and tests.
 The test files for the spreadsheet import live in `tests/fixtures/import/` (description and expected
 results in the README there). They are also handy for trying the import manually in the app.
 Regenerate them (requires LibreOffice): `node scripts/generate-import-samples.mjs`.
+
+Sample CVs from software development and AI engineering with matching job postings live in
+`tests/fixtures/cv/samples/` (combinations and checks in the README there). Regenerate them
+(requires LibreOffice): `node scripts/generate-cv-samples.mjs`.
 
 No test sends real requests to Anthropic: unit tests replace the Claude client with fakes, the E2E
 tests start the app with `BEWERBERY_AI_FAKE=1` (deterministic variants and scores, key storage

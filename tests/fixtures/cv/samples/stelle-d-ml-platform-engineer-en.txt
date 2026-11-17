@@ -1,0 +1,15 @@
+ML Platform Engineer (f/m/d)
+Brightline Logistics, Berlin
+
+About the role
+- Design and run our machine learning platform on Kubernetes (Kubeflow, MLflow, feature store).
+- Enable data scientists to train, evaluate and deploy models, including LLM-based services.
+- Automate infrastructure with Terraform on Google Cloud and AWS.
+- Set standards for model monitoring, evaluation and responsible AI.
+
+What you bring
+- Several years of experience in MLOps or platform engineering
+- Strong Python skills, Go is a plus
+- Hands-on experience with Kubernetes, Kubeflow and MLflow
+- Experience leading teams or technical initiatives
+- Excellent English, German is a plus

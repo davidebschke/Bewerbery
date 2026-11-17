@@ -1,0 +1,16 @@
+AI Engineer (m/w/d) – LLM-Anwendungen
+Kompass Health GmbH, Berlin oder remote
+
+Deine Aufgaben
+- Du entwickelst LLM-basierte Assistenten für Ärztinnen und Pflegekräfte (Retrieval-Augmented Generation).
+- Du baust Evaluationsverfahren für Antwortqualität, Halluzinationen und Datenschutz auf.
+- Du bringst Modelle mit unserem Plattform-Team in den Betrieb (Docker, Kubernetes, Azure).
+- Du arbeitest eng mit Produkt und Medizin zusammen und erklärst technische Entscheidungen verständlich.
+
+Das bringst du mit
+- Mehrjährige Erfahrung mit Python und Machine Learning
+- Praxis mit LLM-Frameworks (LangChain, LlamaIndex o. ä.), Embeddings und Vektordatenbanken (z. B. pgvector)
+- Erfahrung mit Prompt Engineering und der Evaluation generativer Modelle
+- MLOps-Kenntnisse: MLflow, CI/CD, Monitoring
+- Wünschenswert: Erfahrung mit sensiblen Daten (DSGVO), TypeScript für Prototypen
+- Sehr gute Deutsch- und Englischkenntnisse

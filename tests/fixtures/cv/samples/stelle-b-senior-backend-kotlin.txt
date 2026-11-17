@@ -1,0 +1,15 @@
+Senior Backend Engineer Kotlin (m/w/d)
+Fahrwerk Mobility GmbH, Köln (hybrid)
+
+Deine Aufgaben
+- Entwicklung und Betrieb von Microservices für unsere Buchungsplattform
+- Gestaltung von APIs und ereignisgetriebener Kommunikation mit Kafka
+- Verantwortung für Qualität: Tests, Code-Reviews, Observability
+- Mentoring von jüngeren Teammitgliedern
+
+Dein Profil
+- 5+ Jahre Erfahrung in der Backend-Entwicklung mit Kotlin oder Java
+- Sehr gute Kenntnisse in Spring Boot und PostgreSQL
+- Erfahrung mit Kafka, Docker und Kubernetes
+- Cloud-Erfahrung (AWS), Infrastructure as Code (Terraform) ist ein Plus
+- Erfahrung mit Domain-Driven Design wünschenswert
