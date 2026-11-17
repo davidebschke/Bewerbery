@@ -156,11 +156,38 @@ describe('useCvOptimization', () => {
     await act(async () => finish())
   })
 
-  it('can show a stored result directly', async () => {
+  it('shows a stored result directly and can discard it', async () => {
+    api.getLastCvResult.mockResolvedValueOnce(makeCvResult({ id: 'alt' }))
     seedStore()
     const { result } = renderHook(() => useCvOptimization())
-    act(() => result.current.showResult(makeCvResult({ id: 'alt' })))
-    expect(result.current.phase).toBe('result')
+    await waitFor(() => expect(result.current.phase).toBe('result'))
     expect(result.current.result?.id).toBe('alt')
+
+    await act(() => result.current.discard())
+    expect(api.clearLastCvResult).toHaveBeenCalled()
+    expect(result.current.result).toBeNull()
+    expect(result.current.phase).toBe('input')
+  })
+
+  it('ignores a failing request for the stored result', async () => {
+    api.getLastCvResult.mockRejectedValueOnce(new Error('ipc'))
+    seedStore()
+    const { result } = renderHook(() => useCvOptimization())
+    await waitFor(() => expect(result.current.keyConfigured).toBe(true))
+    expect(result.current.phase).toBe('input')
+  })
+
+  it('does not replace a running optimization with the stored result', async () => {
+    let resolveLast: (value: null | ReturnType<typeof makeCvResult>) => void = () => undefined
+    api.getLastCvResult.mockImplementationOnce(
+      () => new Promise((resolve) => (resolveLast = resolve)),
+    )
+    api.optimizeCv.mockImplementationOnce(() => new Promise(() => undefined))
+    const { result } = await ready()
+    act(() => result.current.start())
+    expect(result.current.phase).toBe('running')
+    await act(async () => resolveLast(makeCvResult({ id: 'alt' })))
+    expect(result.current.phase).toBe('running')
+    expect(result.current.result).toBeNull()
   })
 })

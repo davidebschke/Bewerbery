@@ -173,6 +173,27 @@ describe('CvOptimizationView', () => {
     expect(lastToast()?.message).toBe('Text konnte nicht kopiert werden.')
   })
 
+  it('shows the stored result on opening and discards it after confirmation', async () => {
+    api.getLastCvResult.mockResolvedValueOnce(makeCvResult({ applicationId: 'a1' }))
+    render(<CvOptimizationView settingsOpen={false} onOpenSettings={vi.fn()} />)
+    await screen.findByRole('heading', { name: 'Frontend-Entwickler · Muster GmbH' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Verwerfen' }))
+    const confirm = screen.getByRole('group', { name: 'Ergebnis verwerfen bestätigen' })
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Abbrechen' }))
+    expect(api.clearLastCvResult).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Verwerfen' }))
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Ergebnis verwerfen bestätigen' })).getByRole(
+        'button',
+        { name: 'Verwerfen' },
+      ),
+    )
+    expect(api.clearLastCvResult).toHaveBeenCalled()
+    expect(await screen.findByRole('button', { name: 'Optimieren' })).toBeInTheDocument()
+  })
+
   it('reloads the key status after the settings were closed', async () => {
     const { rerender } = render(<CvOptimizationView settingsOpen onOpenSettings={vi.fn()} />)
     await waitFor(() => expect(api.getAiKeyStatus).toHaveBeenCalledTimes(1))

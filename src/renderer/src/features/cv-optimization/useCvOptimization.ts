@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AiErrorCode, AiResult } from '@shared/domain/cv/aiErrors'
 import { checkJobDescription } from '@shared/domain/cv/limits'
 import type { CvOptimizationResult, CvSource } from '@shared/domain/cv/schemas'
+
 import { getApi } from '../../lib/api'
 import { useAppStore } from '../../stores/appStore'
 
@@ -48,6 +49,15 @@ export function useCvOptimization() {
   useEffect(() => {
     let active = true
     void loadKeyStatus().then((configured) => active && setKeyConfigured(configured))
+    // Letztes Ergebnis (auch aus einer früheren Sitzung) direkt anzeigen
+    void getApi()
+      .getLastCvResult()
+      .then((last) => {
+        if (!active || !last || running.current) return
+        setResult(last)
+        setPhase((current) => (current === 'input' ? 'result' : current))
+      })
+      .catch(() => undefined)
     return () => {
       active = false
     }
@@ -124,6 +134,15 @@ export function useCvOptimization() {
     void run()
   }
 
+  async function discard() {
+    try {
+      await getApi().clearLastCvResult()
+    } finally {
+      setResult(null)
+      setPhase('input')
+    }
+  }
+
   function cancel() {
     void getApi()
       .cancelCvOptimization()
@@ -156,10 +175,7 @@ export function useCvOptimization() {
     cancel,
     retry: () => void run(),
     backToInput: () => setPhase('input'),
-    showResult: (value: CvOptimizationResult) => {
-      setResult(value)
-      setPhase('result')
-    },
+    discard,
   }
 }
 

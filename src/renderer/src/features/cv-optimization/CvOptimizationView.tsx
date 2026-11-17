@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Loader2, RotateCcw, Sparkles } from 'lucide-react'
+import { ArrowLeft, Loader2, RotateCcw, Sparkles, Trash2 } from 'lucide-react'
 import { AI_ERROR_MESSAGES } from '@shared/domain/cv/aiErrors'
 import { variantText } from '@shared/domain/cv/rewrite'
 import type { VariantStyle } from '@shared/domain/cv/styles'
@@ -24,6 +24,7 @@ export function CvOptimizationView({ settingsOpen, onOpenSettings }: CvOptimizat
   const attachDocument = useAppStore((s) => s.attachDocument)
   const pushToast = useAppStore((s) => s.pushToast)
   const [busy, setBusy] = useState<VariantStyle | null>(null)
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
   const settingsWereOpen = useRef(settingsOpen)
   const { refreshKey, result } = state
 
@@ -90,10 +91,37 @@ export function CvOptimizationView({ settingsOpen, onOpenSettings }: CvOptimizat
             Datei.
           </p>
         </div>
-        {state.phase === 'result' && (
-          <Button onClick={state.backToInput}>
-            <ArrowLeft size={16} aria-hidden="true" /> Neue Optimierung
-          </Button>
+        {state.phase === 'result' && !confirmDiscard && (
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={state.backToInput}>
+              <ArrowLeft size={16} aria-hidden="true" /> Neue Optimierung
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirmDiscard(true)}>
+              <Trash2 size={16} aria-hidden="true" /> Verwerfen
+            </Button>
+          </div>
+        )}
+        {state.phase === 'result' && confirmDiscard && (
+          <div
+            role="group"
+            aria-label="Ergebnis verwerfen bestätigen"
+            className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2 text-sm"
+          >
+            <span>Ergebnis endgültig verwerfen?</span>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => {
+                setConfirmDiscard(false)
+                void state.discard()
+              }}
+            >
+              Verwerfen
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setConfirmDiscard(false)}>
+              Abbrechen
+            </Button>
+          </div>
         )}
       </div>
 
