@@ -49,7 +49,11 @@ function setup(overrides: Partial<IpcDeps> = {}) {
     get: vi.fn(async () => STORED_KEY),
     remove: vi.fn(async () => ({ ...keyStatus, configured: false, hint: null })),
   }
-  const ai: AiClient = { testKey: vi.fn(async () => ({ ok: true as const, value: true as const })) }
+  const ai: AiClient = {
+    testKey: vi.fn(async () => ({ ok: true as const, value: true as const })),
+    generateVariant: vi.fn(),
+    assessAll: vi.fn(),
+  }
   const deps: IpcDeps = {
     ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
     dataStore,
