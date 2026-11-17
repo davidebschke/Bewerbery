@@ -1,3 +1,11 @@
+import type { AiResult } from './domain/cv/aiErrors'
+import type {
+  AiKeyStatus,
+  CvOptimizationRequest,
+  CvOptimizationResult,
+  CvSource,
+} from './domain/cv/schemas'
+import type { VariantStyle } from './domain/cv/styles'
 import type { TemplateFormat } from './domain/import/template'
 import type { AppData, ApplicationDocument, ImportWorkbook } from './types'
 
@@ -12,6 +20,18 @@ export const IPC = {
   exportApplicationsPdf: 'pdf:export-applications',
   pickImportFile: 'import:pick-file',
   saveImportTemplate: 'import:save-template',
+  getAiKeyStatus: 'ai:key-status',
+  setAiKey: 'ai:set-key',
+  testAiKey: 'ai:test-key',
+  removeAiKey: 'ai:remove-key',
+  pickCvFile: 'cv:pick-file',
+  readCvFile: 'cv:read-file',
+  optimizeCv: 'cv:optimize',
+  cancelCvOptimization: 'cv:cancel',
+  getLastCvResult: 'cv:last-result',
+  clearLastCvResult: 'cv:clear-last-result',
+  saveCvVariant: 'cv:save-variant',
+  attachCvVariant: 'cv:attach-variant',
 } as const
 
 export interface PdfExportOutcome {
@@ -36,4 +56,28 @@ export interface BewerberyApi {
   pickImportFile(): Promise<ImportWorkbook | null>
   saveImportTemplate(format: TemplateFormat): Promise<FileSaveOutcome>
   getPathForFile(file: File): string
+
+  // KI-Assistent – der API-Key selbst wird nie zurückgegeben
+  getAiKeyStatus(): Promise<AiKeyStatus>
+  setAiKey(apiKey: string): Promise<AiResult<AiKeyStatus>>
+  /** Ohne Argument wird der gespeicherte Key geprüft */
+  testAiKey(apiKey?: string): Promise<AiResult<true>>
+  removeAiKey(): Promise<AiKeyStatus>
+
+  // CV-Optimierung
+  /** Lebenslauf (DOCX/ODT) wählen; `null` = Dialog abgebrochen */
+  pickCvFile(): Promise<AiResult<CvSource> | null>
+  readCvFile(filePath: string): Promise<AiResult<CvSource>>
+  optimizeCv(request: CvOptimizationRequest): Promise<AiResult<CvOptimizationResult>>
+  cancelCvOptimization(): Promise<void>
+  /** Letztes Ergebnis (auch nach einem Neustart); `null` = keins */
+  getLastCvResult(): Promise<CvOptimizationResult | null>
+  clearLastCvResult(): Promise<void>
+  /** Variante im Originaldesign über einen Speichern-Dialog ablegen */
+  saveCvVariant(style: VariantStyle): Promise<AiResult<FileSaveOutcome>>
+  /** Variante im Originaldesign als Dokument an eine Bewerbung hängen */
+  attachCvVariant(
+    style: VariantStyle,
+    applicationId: string,
+  ): Promise<AiResult<ApplicationDocument>>
 }

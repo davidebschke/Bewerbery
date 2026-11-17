@@ -1,8 +1,17 @@
 import { z } from 'zod'
 import { IPC } from '@shared/ipc'
+import { fail } from '@shared/domain/cv/aiErrors'
+import {
+  apiKeySchema,
+  cvOptimizationRequestSchema,
+  variantStyleSchema,
+} from '@shared/domain/cv/schemas'
 import { TEMPLATE_FORMATS } from '@shared/domain/import/template'
 import { applicationDocumentSchema } from '@shared/schemas'
 import type { AppData } from '@shared/types'
+import type { AiClient } from '../ai/claudeClient'
+import type { SecretStore } from '../ai/secretStore'
+import type { ChooseVariantPath, CvService } from '../cv/cvService'
 import type { DocumentService } from '../documents/documentService'
 import type { ImportService } from '../import/importService'
 import type { PdfExportService } from '../pdf/pdfExportService'
@@ -16,6 +25,14 @@ export interface IpcDeps {
   documents: DocumentService
   pdfExport: PdfExportService
   importer: ImportService
+  /** Verschlüsselt gespeicherter Anthropic-API-Key */
+  secrets: SecretStore
+  ai: AiClient
+  cv: CvService
+  /** Dateidialog für den Lebenslauf (DOCX/ODT); `null` = abgebrochen */
+  pickCvFile(): Promise<string | null>
+  /** Speichern-Dialog für eine CV-Variante; `null` = abgebrochen */
+  saveCvFile: ChooseVariantPath
   /** Öffnet einen Dateiauswahldialog und liefert die gewählten Pfade */
   pickFiles(): Promise<string[]>
   /** Öffnet eine Datei mit dem Standardprogramm, liefert Fehlermeldung oder '' */
@@ -29,6 +46,7 @@ const idSchema = z.string().min(1)
 const pathsSchema = z.array(z.string().min(1))
 const applicationIdsSchema = z.array(idSchema)
 const templateFormatSchema = z.enum(TEMPLATE_FORMATS)
+const filePathSchema = z.string().min(1)
 
 export function registerIpc(deps: IpcDeps): void {
   const { ipcMain, dataStore, documents } = deps
@@ -82,5 +100,50 @@ export function registerIpc(deps: IpcDeps): void {
 
   ipcMain.handle(IPC.saveImportTemplate, (_event, format) =>
     deps.importer.saveTemplate(templateFormatSchema.parse(format)),
+  )
+
+  // KI-Assistent: Kein Handler gibt den API-Key zurück
+  ipcMain.handle(IPC.getAiKeyStatus, () => deps.secrets.status())
+
+  ipcMain.handle(IPC.setAiKey, (_event, apiKey) => deps.secrets.set(apiKeySchema.parse(apiKey)))
+
+  ipcMain.handle(IPC.testAiKey, async (_event, apiKey) => {
+    const key = apiKey === undefined ? await deps.secrets.get() : apiKeySchema.parse(apiKey)
+    if (!key) return fail('no-key')
+    return deps.ai.testKey(key)
+  })
+
+  ipcMain.handle(IPC.removeAiKey, () => {
+    // Ohne Key darf kein Lauf weiterlaufen
+    deps.cv.cancel()
+    return deps.secrets.remove()
+  })
+
+  // CV-Optimierung
+  ipcMain.handle(IPC.pickCvFile, async () => {
+    const path = await deps.pickCvFile()
+    return path ? deps.cv.loadSource(path) : null
+  })
+
+  ipcMain.handle(IPC.readCvFile, (_event, filePath) =>
+    deps.cv.loadSource(filePathSchema.parse(filePath)),
+  )
+
+  ipcMain.handle(IPC.optimizeCv, (_event, request) =>
+    deps.cv.optimize(cvOptimizationRequestSchema.parse(request)),
+  )
+
+  ipcMain.handle(IPC.cancelCvOptimization, () => deps.cv.cancel())
+
+  ipcMain.handle(IPC.getLastCvResult, () => deps.cv.getLastResult())
+
+  ipcMain.handle(IPC.clearLastCvResult, () => deps.cv.clearLastResult())
+
+  ipcMain.handle(IPC.saveCvVariant, (_event, style) =>
+    deps.cv.saveVariant(variantStyleSchema.parse(style), deps.saveCvFile),
+  )
+
+  ipcMain.handle(IPC.attachCvVariant, (_event, style, applicationId) =>
+    deps.cv.attachVariant(variantStyleSchema.parse(style), idSchema.parse(applicationId)),
   )
 }

@@ -2,7 +2,8 @@
 
 Desktop-App (Electron + React + TypeScript) zur Verwaltung von Bewerbungen. Oberfläche nur auf Deutsch.
 Verbindliche Grundsätze: [.specify/memory/constitution.md](.specify/memory/constitution.md).
-Aktuelle Spezifikation: [specs/001-bewerbery-mvp/](specs/001-bewerbery-mvp/).
+Spezifikationen: [specs/001-bewerbery-mvp/](specs/001-bewerbery-mvp/),
+[specs/002-cv-optimization/](specs/002-cv-optimization/) (KI-CV-Optimierung, Issue #7).
 
 ## Befehle
 
@@ -38,6 +39,11 @@ für `npm run dev` ggf. vorher `Remove-Item Env:ELECTRON_RUN_AS_NODE` ausführen
 Renderer lädt beim Start `loadData()`; jede Store-Aktion erzeugt einen neuen `AppData`-Stand und ruft
 `saveData()`. Der Main-Prozess validiert mit Zod, schreibt atomar nach `%APPDATA%/Bewerbery/bewerbery-data.json`
 und prüft danach fällige Bewerbungen für Windows-Benachrichtigungen.
+
+KI-Assistent (Constitution I, Opt-in seit v1.1.0): Der Anthropic-API-Key liegt verschlüsselt
+(`safeStorage`) in `ai-key.bin` + `ai-key.json`, getrennt von `bewerbery-data.json`. Die CV-Quelle und das
+letzte Ergebnis liegen unter `cv/`. Netzwerkcode nur in `src/main/ai/`; Tests nutzen Fake-Clients,
+E2E-Tests `BEWERBERY_AI_FAKE=1`.
 
 ## Konventionen
 

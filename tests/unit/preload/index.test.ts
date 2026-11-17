@@ -49,4 +49,47 @@ describe('preload api', () => {
     ])
     expect(api.getPathForFile({} as File)).toBe('C:/file.pdf')
   })
+
+  it('forwards ai key calls to their IPC channels', async () => {
+    const { api } = await import('../../../src/preload/index')
+
+    await api.getAiKeyStatus()
+    await api.setAiKey('key')
+    await api.testAiKey()
+    await api.testAiKey('key')
+    await api.removeAiKey()
+
+    expect(invoke.mock.calls).toEqual([
+      [IPC.getAiKeyStatus],
+      [IPC.setAiKey, 'key'],
+      [IPC.testAiKey, undefined],
+      [IPC.testAiKey, 'key'],
+      [IPC.removeAiKey],
+    ])
+  })
+
+  it('forwards cv optimization calls to their IPC channels', async () => {
+    const { api } = await import('../../../src/preload/index')
+    const request = { jobDescription: 'React', applicationId: null, jobTitle: '' }
+
+    await api.pickCvFile()
+    await api.readCvFile('C:/cv.docx')
+    await api.optimizeCv(request)
+    await api.cancelCvOptimization()
+    await api.getLastCvResult()
+    await api.clearLastCvResult()
+    await api.saveCvVariant('ats')
+    await api.attachCvVariant('factual', 'a')
+
+    expect(invoke.mock.calls).toEqual([
+      [IPC.pickCvFile],
+      [IPC.readCvFile, 'C:/cv.docx'],
+      [IPC.optimizeCv, request],
+      [IPC.cancelCvOptimization],
+      [IPC.getLastCvResult],
+      [IPC.clearLastCvResult],
+      [IPC.saveCvVariant, 'ats'],
+      [IPC.attachCvVariant, 'factual', 'a'],
+    ])
+  })
 })

@@ -37,7 +37,12 @@ describe('dataStore', () => {
       [1, 2, 3, 4].map((weeks) =>
         store.save(
           makeData({
-            settings: { followUpWeeks: weeks, notificationsEnabled: true, theme: 'system' },
+            settings: {
+              followUpWeeks: weeks,
+              notificationsEnabled: true,
+              theme: 'system',
+              aiConsentAt: null,
+            },
           }),
         ),
       ),

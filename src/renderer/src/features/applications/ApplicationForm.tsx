@@ -1,5 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { MAX_FOLLOW_UP_WEEKS, MIN_FOLLOW_UP_WEEKS } from '@shared/constants'
+import {
+  MAX_FOLLOW_UP_WEEKS,
+  MAX_JOB_DESCRIPTION_CHARS,
+  MIN_FOLLOW_UP_WEEKS,
+} from '@shared/constants'
 import { toIsoDate } from '@shared/domain/dates'
 import { createId } from '@shared/domain/factory'
 import { applicationInputSchema } from '@shared/schemas'
@@ -29,6 +33,7 @@ function initialValues(application?: Application): FormValues {
     sentAt: application?.sentAt ?? toIsoDate(new Date()),
     followUpWeeks: application?.followUpWeeks ? String(application.followUpWeeks) : '',
     notes: application?.notes ?? '',
+    jobDescription: application?.jobDescription ?? '',
   }
 }
 
@@ -191,6 +196,17 @@ export function ApplicationForm({ application, onClose }: ApplicationFormProps) 
           onChange={set('notes')}
           className="sm:col-span-2"
           placeholder="Gehaltsvorstellung, Eindrücke, nächste Schritte …"
+        />
+        <TextArea
+          label="Stellenanzeige"
+          value={values.jobDescription}
+          onChange={set('jobDescription')}
+          error={errors.jobDescription}
+          hint="Text der Ausschreibung – wird für die CV-Optimierung verwendet."
+          maxLength={MAX_JOB_DESCRIPTION_CHARS}
+          rows={5}
+          className="sm:col-span-2"
+          placeholder="Aufgaben, Anforderungen, Benefits …"
         />
       </form>
     </Dialog>

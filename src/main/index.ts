@@ -1,8 +1,15 @@
+import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
-import { BrowserWindow, Notification, app, dialog, ipcMain, shell } from 'electron'
+import { BrowserWindow, Notification, app, dialog, ipcMain, safeStorage, shell } from 'electron'
 import { DOCUMENTS_DIR_NAME } from '@shared/constants'
 import { TEMPLATE_FORMAT_LABELS } from '@shared/domain/import/template'
 import type { AppData } from '@shared/types'
+import { createAiClient } from './ai/claudeClient'
+import { createFakeAiClient, fakeCrypto, isAiFakeMode } from './ai/fakeAi'
+import { createSecretStore, type SecretCrypto } from './ai/secretStore'
+import { CV_EXTENSIONS, CV_FORMAT_LABELS } from './cv/cvDocument'
+import { createCvService, CV_DIR_NAME } from './cv/cvService'
+import { createLastResultStore } from './cv/lastResultStore'
 import { createDocumentService } from './documents/documentService'
 import { createImportService, IMPORT_EXTENSIONS } from './import/importService'
 import { registerIpc } from './ipc/registerIpc'
@@ -18,6 +25,17 @@ if (process.env.BEWERBERY_USER_DATA) app.setPath('userData', process.env.BEWERBE
 
 let mainWindow: BrowserWindow | null = null
 let latestData: AppData | null = null
+
+const aiFake = isAiFakeMode(process.env)
+
+/** OS-Verschlüsselung; unter Linux ohne Schlüsselbund (`basic_text`) gilt sie als nicht verfügbar */
+const osCrypto: SecretCrypto = {
+  isEncryptionAvailable: () =>
+    safeStorage.isEncryptionAvailable() &&
+    !(process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text'),
+  encryptString: (text) => safeStorage.encryptString(text),
+  decryptString: (buffer) => safeStorage.decryptString(buffer),
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow(createWindowOptions(join(__dirname, '../preload')))
@@ -45,6 +63,9 @@ app.setAppUserModelId('de.ebschke.bewerbery')
 
 app.whenReady().then(() => {
   const userData = app.getPath('userData')
+  const secrets = createSecretStore(userData, aiFake ? fakeCrypto : osCrypto)
+  const ai = aiFake ? createFakeAiClient() : createAiClient()
+  const documents = createDocumentService(join(userData, DOCUMENTS_DIR_NAME))
   const reminders = createReminderService(({ title, body }) => {
     if (Notification.isSupported()) new Notification({ title, body }).show()
   })
@@ -52,7 +73,7 @@ app.whenReady().then(() => {
   registerIpc({
     ipcMain,
     dataStore: createDataStore(userData),
-    documents: createDocumentService(join(userData, DOCUMENTS_DIR_NAME)),
+    documents,
     pdfExport: createPdfExportService(async (suggestedName) => {
       const result = await dialog.showSaveDialog({
         title: 'PDF speichern',
@@ -79,6 +100,32 @@ app.whenReady().then(() => {
         return result.canceled || !result.filePath ? null : result.filePath
       },
     }),
+    secrets,
+    ai,
+    cv: createCvService({
+      lastResults: createLastResultStore(join(userData, CV_DIR_NAME)),
+      secrets,
+      ai,
+      documents,
+      now: () => new Date(),
+      newId: () => randomUUID(),
+    }),
+    saveCvFile: async (suggestedName, format) => {
+      const result = await dialog.showSaveDialog({
+        title: 'Lebenslauf-Variante speichern',
+        defaultPath: suggestedName,
+        filters: [{ name: CV_FORMAT_LABELS[format], extensions: [format] }],
+      })
+      return result.canceled || !result.filePath ? null : result.filePath
+    },
+    pickCvFile: async () => {
+      const result = await dialog.showOpenDialog({
+        title: 'Lebenslauf wählen',
+        properties: ['openFile'],
+        filters: [{ name: 'Lebenslauf (DOCX, ODT)', extensions: [...CV_EXTENSIONS] }],
+      })
+      return result.canceled ? null : (result.filePaths[0] ?? null)
+    },
     pickFiles: async () => {
       const result = await dialog.showOpenDialog({
         title: 'Dokumente hinzufügen',

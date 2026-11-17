@@ -12,4 +12,7 @@
   `components/ui/`. Komponenten-Dateien exportieren nur Komponenten (React Fast Refresh).
 - Electron-Sicherheit: `contextIsolation`, `sandbox`, kein `nodeIntegration`, externe Links nur via
   `decideNavigation()` / `isExternalUrl()`.
-- Keine nativen Node-Module (exe-Build ohne Toolchain). Keine Netzwerkzugriffe (Local-First).
+- Keine nativen Node-Module (exe-Build ohne Toolchain).
+- Local-First: Netzwerk nur über `src/main/ai/` gemäß Constitution I (Opt-in-Ausnahme, nur
+  Anthropic-API, nur mit Nutzer-Key und auf ausdrückliche Aktion). `@anthropic-ai/sdk` wird
+  ausschließlich dort importiert; der API-Key verlässt den Main-Prozess nie.

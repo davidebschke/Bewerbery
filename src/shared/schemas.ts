@@ -3,6 +3,7 @@ import {
   DATA_VERSION,
   DEFAULT_FOLLOW_UP_WEEKS,
   MAX_FOLLOW_UP_WEEKS,
+  MAX_JOB_DESCRIPTION_CHARS,
   MIN_FOLLOW_UP_WEEKS,
 } from './constants'
 
@@ -38,6 +39,10 @@ export const applicationSchema = z.object({
   stage: stageSchema.default('applied'),
   appointmentAt: z.string().nullable().default(null),
   notes: z.string().default(''),
+  jobDescription: z
+    .string()
+    .max(MAX_JOB_DESCRIPTION_CHARS, 'Stellenanzeige ist zu lang')
+    .default(''),
   documents: z.array(applicationDocumentSchema).default([]),
   awardedStages: z.array(stageSchema).default([]),
   createdAt: z.string(),
@@ -50,6 +55,8 @@ export const settingsSchema = z.object({
   followUpWeeks: followUpWeeksSchema.default(DEFAULT_FOLLOW_UP_WEEKS),
   notificationsEnabled: z.boolean().default(true),
   theme: themeSchema.default('system'),
+  /** Zeitpunkt der Datenschutz-Zustimmung für den KI-Assistenten; `null` = noch nicht zugestimmt */
+  aiConsentAt: z.string().nullable().default(null),
 })
 
 export const progressSchema = z.object({
@@ -84,6 +91,7 @@ export const applicationInputSchema = applicationSchema
     sentAt: true,
     followUpWeeks: true,
     notes: true,
+    jobDescription: true,
   })
   .extend({
     position: z.string().trim().min(1, 'Position ist erforderlich'),

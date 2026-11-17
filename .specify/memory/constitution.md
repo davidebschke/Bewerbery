@@ -7,6 +7,14 @@ Alle Daten (Bewerbungen, Einstellungen, Fortschritt, Dokumente) werden ausschlie
 Benutzerdatenverzeichnis gespeichert. Es gibt keine Netzwerkaufrufe, kein Tracking und keine Cloud.
 Schreibvorgänge sind atomar (Temp-Datei + Rename), geladene Daten werden per Schema validiert.
 
+**Opt-in-Ausnahme KI-Assistent (seit v1.1.0)**: Netzwerkzugriff ist ausschließlich zur Anthropic-API
+erlaubt – nur wenn der Nutzer selbst einen API-Key hinterlegt hat und nur als Folge einer
+ausdrücklichen Nutzeraktion (z. B. „Optimieren“, „Verbindung prüfen“). Vor dem ersten Senden von
+Inhalten bestätigt der Nutzer einen Datenschutzhinweis. Der API-Key wird mit der
+Betriebssystem-Verschlüsselung gespeichert, getrennt von den übrigen Daten, und verlässt den
+Main-Prozess nie. Der gesamte Netzwerkcode liegt in `src/main/ai/`. Ohne Key verhält sich die App
+vollständig lokal.
+
 ### II. Pure Domain Logic
 Fachlogik (Fortschritt, Status, Sortierung/Pinning, XP, Level, Badges, Streaks) liegt als reines
 TypeScript in `src/shared/` – ohne Abhängigkeiten zu React oder Electron. Sie ist deterministisch
@@ -49,4 +57,12 @@ Keine nativen Node-Module, damit der Windows-Build ohne Build-Toolchain funktion
 Diese Constitution hat Vorrang vor anderen Konventionen. Änderungen werden hier dokumentiert,
 mit Versionssprung begründet und in `CLAUDE.md` gespiegelt.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-23 | **Last Amended**: 2026-09-23
+### Änderungshistorie
+
+- **1.1.0** (2026-11-17, MINOR): Opt-in-Ausnahme von Prinzip I für den KI-Assistenten (Issue #7,
+  CV-Optimierung). Begründung: Die vom Nutzer gewünschte KI-Funktion ist ohne Anbieter-API nicht
+  umsetzbar; die Ausnahme ist eng begrenzt (ein Anbieter, eigener Key, ausdrückliche Aktion,
+  Datenschutzhinweis) und ändert nichts für Nutzer ohne Key.
+- **1.0.0** (2026-09-23): Erstfassung.
+
+**Version**: 1.1.0 | **Ratified**: 2026-09-23 | **Last Amended**: 2026-11-17

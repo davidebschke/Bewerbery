@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { MAX_JOB_DESCRIPTION_CHARS } from '@shared/constants'
 import { toIsoDate } from '@shared/domain/dates'
 import { createApplication, createEmptyData } from '@shared/domain/factory'
 import {
@@ -60,6 +61,10 @@ export interface AppState {
   deleteApplication(id: string): Promise<void>
   markFollowedUp(id: string): void
   setStage(id: string, stage: Stage, appointmentAt?: string | null): void
+  /** Hängt ein bereits gespeichertes Dokument (z. B. eine CV-Variante) an eine Bewerbung */
+  attachDocument(id: string, document: ApplicationDocument): void
+  /** Speichert die Stellenanzeige einer Bewerbung (z. B. aus der CV-Optimierung) */
+  setJobDescription(id: string, text: string): void
   updateSettings(patch: Partial<Settings>): void
   pushToast(kind: ToastKind, message: string): void
   dismissToast(id: number): void
@@ -196,6 +201,17 @@ export const useAppStore = create<AppState>()((set, get) => {
         }
       }
       persist(data)
+    },
+
+    attachDocument(id, document) {
+      if (!get().data.applications.some((app) => app.id === id)) return
+      persist(mapApplication(id, (app) => ({ ...app, documents: [...app.documents, document] })))
+    },
+
+    setJobDescription(id, text) {
+      if (!get().data.applications.some((app) => app.id === id)) return
+      const jobDescription = text.slice(0, MAX_JOB_DESCRIPTION_CHARS)
+      persist(mapApplication(id, (app) => ({ ...app, jobDescription })))
     },
 
     updateSettings(patch) {

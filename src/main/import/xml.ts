@@ -1,4 +1,5 @@
 import { MAX_IMPORT_ROWS } from '@shared/constants'
+import { decodeEntities, escapeXml, tokenizeXml } from '@shared/xml/tokens'
 
 /** Fehler mit einer Meldung, die so dem Nutzer angezeigt werden kann */
 export class ImportFileError extends Error {}
@@ -14,59 +15,18 @@ export interface XmlHandlers {
   text?(text: string): void
 }
 
-const TOKEN =
-  /<!\[CDATA\[([\s\S]*?)\]\]>|<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<!DOCTYPE[^>]*>|<\/([^\s>]+)\s*>|<([^\s/>!?]+)((?:\s+[^\s=>/]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>|([^<]+)/g
-const ATTRIBUTE = /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
-
-const NAMED_ENTITIES: Record<string, string> = {
-  amp: '&',
-  lt: '<',
-  gt: '>',
-  quot: '"',
-  apos: "'",
-}
-
-export function decodeEntities(value: string): string {
-  return value.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (match, entity: string) => {
-    if (entity[0] === '#') {
-      const code =
-        entity[1].toLowerCase() === 'x' ? parseInt(entity.slice(2), 16) : Number(entity.slice(1))
-      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : match
-    }
-    return NAMED_ENTITIES[entity.toLowerCase()]
-  })
-}
-
-export function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
-}
-
-function parseAttributes(source: string): Record<string, string> {
-  const attributes: Record<string, string> = {}
-  for (const match of source.matchAll(ATTRIBUTE)) {
-    attributes[match[1]] = decodeEntities(match[2] ?? match[3])
-  }
-  return attributes
-}
+export { decodeEntities, escapeXml }
 
 /** Durchläuft ein XML-Dokument und ruft für Start-, End-Tags und Text die Handler auf */
 export function walkXml(xml: string, handlers: XmlHandlers): void {
-  for (const match of xml.matchAll(TOKEN)) {
-    const [, cdata, closing, opening, attributes, selfClosing, text] = match
-    if (cdata !== undefined) {
-      handlers.text?.(cdata)
-    } else if (closing !== undefined) {
-      handlers.close?.(closing)
-    } else if (opening !== undefined) {
-      handlers.open?.(opening, parseAttributes(attributes), selfClosing === '/')
-      if (selfClosing === '/') handlers.close?.(opening)
-    } else if (text !== undefined) {
-      handlers.text?.(decodeEntities(text))
+  for (const token of tokenizeXml(xml)) {
+    if (token.kind === 'cdata' || token.kind === 'text') {
+      handlers.text?.(token.text)
+    } else if (token.kind === 'close') {
+      handlers.close?.(token.name)
+    } else if (token.kind === 'open') {
+      handlers.open?.(token.name, token.attributes, token.selfClosing)
+      if (token.selfClosing) handlers.close?.(token.name)
     }
   }
 }

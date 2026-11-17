@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { IPC } from '@shared/ipc'
 import { makeApplication, makeData } from '@shared/testing/fixtures'
 import type { ApplicationDocument } from '@shared/types'
+import type { AiClient } from '../../../../src/main/ai/claudeClient'
+import type { SecretStore } from '../../../../src/main/ai/secretStore'
+import type { CvService } from '../../../../src/main/cv/cvService'
 import type { DocumentService } from '../../../../src/main/documents/documentService'
+import { makeCvResult, makeCvSource } from '../../../../src/shared/testing/cvFixtures'
 import type { ImportService } from '../../../../src/main/import/importService'
 import type { PdfExportService } from '../../../../src/main/pdf/pdfExportService'
 import type { DataStore } from '../../../../src/main/storage/dataStore'
@@ -29,6 +33,7 @@ function setup(overrides: Partial<IpcDeps> = {}) {
   const documents: DocumentService = {
     rootDir: 'root',
     importFiles: vi.fn(async () => [doc]),
+    importBuffer: vi.fn(async () => doc),
     resolvePath: vi.fn(() => 'root/app/d1-cv.pdf'),
     remove: vi.fn(async () => undefined),
     removeAll: vi.fn(async () => undefined),
@@ -41,12 +46,41 @@ function setup(overrides: Partial<IpcDeps> = {}) {
     pickWorkbook: vi.fn(async () => ({ fileName: 'a.csv', sheets: [] })),
     saveTemplate: vi.fn(async () => ({ canceled: false, filePath: 'C:/vorlage.ods' })),
   }
+  const secrets: SecretStore = {
+    status: vi.fn(async () => keyStatus),
+    set: vi.fn(async () => ({ ok: true as const, value: keyStatus })),
+    get: vi.fn(async () => STORED_KEY),
+    remove: vi.fn(async () => ({ ...keyStatus, configured: false, hint: null })),
+  }
+  const ai: AiClient = {
+    testKey: vi.fn(async () => ({ ok: true as const, value: true as const })),
+    generateVariant: vi.fn(),
+    assessAll: vi.fn(),
+  }
+  const cv: CvService = {
+    loadSource: vi.fn(async () => ({ ok: true as const, value: makeCvSource() })),
+    optimize: vi.fn(async () => ({ ok: true as const, value: makeCvResult() })),
+    cancel: vi.fn(),
+    isRunning: vi.fn(() => false),
+    saveVariant: vi.fn(async () => ({
+      ok: true as const,
+      value: { canceled: false, filePath: 'C:/cv.docx' },
+    })),
+    attachVariant: vi.fn(async () => ({ ok: true as const, value: doc })),
+    getLastResult: vi.fn(async () => makeCvResult()),
+    clearLastResult: vi.fn(async () => undefined),
+  }
   const deps: IpcDeps = {
     ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
     dataStore,
     documents,
     pdfExport,
     importer,
+    secrets,
+    ai,
+    cv,
+    pickCvFile: vi.fn(async () => 'C:/Lebenslauf.docx'),
+    saveCvFile: vi.fn(async () => 'C:/cv.docx'),
     pickFiles: vi.fn(async () => ['C:/cv.pdf']),
     openPath: vi.fn(async () => ''),
     now: () => new Date('2026-09-23T00:00:00.000Z'),
@@ -55,8 +89,24 @@ function setup(overrides: Partial<IpcDeps> = {}) {
   }
   registerIpc(deps)
   const invoke = (channel: string, ...args: unknown[]) => handlers.get(channel)!({}, ...args)
-  return { deps, dataStore, documents, pdfExport, importer, invoke, data, handlers }
+  return {
+    deps,
+    dataStore,
+    documents,
+    pdfExport,
+    importer,
+    secrets,
+    ai,
+    cv,
+    invoke,
+    data,
+    handlers,
+  }
 }
+
+const STORED_KEY = 'sk-ant-api03-gespeicherter-schluessel-wxyz'
+const NEW_KEY = 'sk-ant-api03-neuer-schluessel-abcd'
+const keyStatus = { configured: true, hint: 'wxyz', encryptionAvailable: true }
 
 describe('registerIpc', () => {
   it('registers all channels', () => {
@@ -149,5 +199,98 @@ describe('registerIpc', () => {
   it('validates the application ids for the pdf export', async () => {
     const { invoke } = setup()
     await expect(invoke(IPC.exportApplicationsPdf, 'not-an-array')).rejects.toThrow()
+  })
+
+  describe('ai key', () => {
+    it('returns the key status without the key itself', async () => {
+      const { invoke } = setup()
+      const status = await invoke(IPC.getAiKeyStatus)
+      expect(status).toEqual(keyStatus)
+      expect(JSON.stringify(status)).not.toContain(STORED_KEY)
+    })
+
+    it('stores a validated, trimmed key', async () => {
+      const { invoke, secrets } = setup()
+      expect(await invoke(IPC.setAiKey, `  ${NEW_KEY}  `)).toEqual({ ok: true, value: keyStatus })
+      expect(secrets.set).toHaveBeenCalledWith(NEW_KEY)
+      expect(() => invoke(IPC.setAiKey, 'kurz')).toThrow()
+      expect(() => invoke(IPC.setAiKey, 42)).toThrow()
+    })
+
+    it('tests a given key or falls back to the stored key', async () => {
+      const { invoke, ai } = setup()
+      expect(await invoke(IPC.testAiKey, NEW_KEY)).toEqual({ ok: true, value: true })
+      expect(ai.testKey).toHaveBeenLastCalledWith(NEW_KEY)
+      await invoke(IPC.testAiKey)
+      expect(ai.testKey).toHaveBeenLastCalledWith(STORED_KEY)
+      await expect(invoke(IPC.testAiKey, 'kurz')).rejects.toThrow()
+    })
+
+    it('reports a missing key when testing without a stored key', async () => {
+      const { invoke, secrets, ai } = setup()
+      vi.mocked(secrets.get).mockResolvedValueOnce(null)
+      expect(await invoke(IPC.testAiKey)).toEqual({ ok: false, error: 'no-key' })
+      expect(ai.testKey).not.toHaveBeenCalled()
+    })
+
+    it('removes the key and cancels a running optimization', async () => {
+      const { invoke, secrets, cv } = setup()
+      expect(await invoke(IPC.removeAiKey)).toMatchObject({ configured: false, hint: null })
+      expect(secrets.remove).toHaveBeenCalled()
+      expect(cv.cancel).toHaveBeenCalled()
+    })
+  })
+
+  describe('cv optimization', () => {
+    it('picks and reads a cv file', async () => {
+      const { invoke, cv } = setup()
+      expect(await invoke(IPC.pickCvFile)).toEqual({ ok: true, value: makeCvSource() })
+      expect(cv.loadSource).toHaveBeenCalledWith('C:/Lebenslauf.docx')
+
+      await invoke(IPC.readCvFile, 'C:/drop/cv.odt')
+      expect(cv.loadSource).toHaveBeenLastCalledWith('C:/drop/cv.odt')
+      expect(() => invoke(IPC.readCvFile, '')).toThrow()
+    })
+
+    it('returns null when the cv dialog is cancelled', async () => {
+      const { invoke, cv } = setup({ pickCvFile: vi.fn(async () => null) })
+      expect(await invoke(IPC.pickCvFile)).toBeNull()
+      expect(cv.loadSource).not.toHaveBeenCalled()
+    })
+
+    it('optimizes with a validated request and cancels on demand', async () => {
+      const { invoke, cv } = setup()
+      const request = { jobDescription: '  React  ', applicationId: null, jobTitle: 'Dev' }
+      expect(await invoke(IPC.optimizeCv, request)).toEqual({ ok: true, value: makeCvResult() })
+      expect(cv.optimize).toHaveBeenCalledWith({ ...request, jobDescription: 'React' })
+      expect(() => invoke(IPC.optimizeCv, { ...request, jobDescription: ' ' })).toThrow()
+
+      invoke(IPC.cancelCvOptimization)
+      expect(cv.cancel).toHaveBeenCalled()
+    })
+
+    it('returns and clears the last result', async () => {
+      const { invoke, cv } = setup()
+      expect(await invoke(IPC.getLastCvResult)).toEqual(makeCvResult())
+      await invoke(IPC.clearLastCvResult)
+      expect(cv.clearLastResult).toHaveBeenCalled()
+    })
+
+    it('saves and attaches validated variants', async () => {
+      const { invoke, cv, deps } = setup()
+      expect(await invoke(IPC.saveCvVariant, 'ats')).toEqual({
+        ok: true,
+        value: { canceled: false, filePath: 'C:/cv.docx' },
+      })
+      expect(cv.saveVariant).toHaveBeenCalledWith('ats', deps.saveCvFile)
+      expect(await invoke(IPC.attachCvVariant, 'factual', 'app-1')).toEqual({
+        ok: true,
+        value: doc,
+      })
+      expect(cv.attachVariant).toHaveBeenCalledWith('factual', 'app-1')
+
+      expect(() => invoke(IPC.saveCvVariant, 'fancy')).toThrow()
+      expect(() => invoke(IPC.attachCvVariant, 'ats', '')).toThrow()
+    })
   })
 })

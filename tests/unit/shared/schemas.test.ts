@@ -12,7 +12,12 @@ describe('schemas', () => {
     expect(data).toEqual({
       version: 1,
       applications: [],
-      settings: { followUpWeeks: 2, notificationsEnabled: true, theme: 'system' },
+      settings: {
+        followUpWeeks: 2,
+        notificationsEnabled: true,
+        theme: 'system',
+        aiConsentAt: null,
+      },
       progress: {
         xp: 0,
         applicationsCreated: 0,
@@ -74,12 +79,31 @@ describe('schemas', () => {
       ],
     })
     expect(data.applications[0].position).toBe('')
+    expect(data.applications[0].jobDescription).toBe('')
+  })
+
+  it('accepts a job description up to 15 000 characters', () => {
+    const base = { company: 'A', position: 'P', sentAt: '2026-09-01' }
+    const ok = applicationInputSchema.safeParse({ ...base, jobDescription: 'x'.repeat(15_000) })
+    expect(ok.success).toBe(true)
+    const tooLong = applicationInputSchema.safeParse({
+      ...base,
+      jobDescription: 'x'.repeat(15_001),
+    })
+    expect(tooLong.success).toBe(false)
+    expect(tooLong.error!.issues[0].message).toBe('Stellenanzeige ist zu lang')
   })
 
   it('limits follow-up weeks to 1..12', () => {
     expect(settingsSchema.safeParse({ followUpWeeks: 0 }).success).toBe(false)
     expect(settingsSchema.safeParse({ followUpWeeks: 13 }).success).toBe(false)
     expect(settingsSchema.safeParse({ followUpWeeks: 12 }).success).toBe(true)
+  })
+
+  it('keeps the ai consent timestamp and defaults it to null', () => {
+    expect(settingsSchema.parse({}).aiConsentAt).toBeNull()
+    const at = '2026-11-17T10:00:00.000Z'
+    expect(settingsSchema.parse({ aiConsentAt: at }).aiConsentAt).toBe(at)
   })
 
   it('rejects unknown data versions', () => {

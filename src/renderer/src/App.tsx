@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileUp, Plus, Settings as SettingsIcon } from 'lucide-react'
+import { Briefcase, FileUp, Plus, Settings as SettingsIcon, Sparkles } from 'lucide-react'
 import { arrangeApplications, type StageFilter } from '@shared/domain/sorting'
 import type { Application } from '@shared/types'
 import appIcon from './assets/icon.png'
@@ -9,6 +9,7 @@ import { Toaster } from './components/ui/Toaster'
 import { ApplicationForm } from './features/applications/ApplicationForm'
 import { ApplicationGrid } from './features/applications/ApplicationGrid'
 import { ExportSelectionBar } from './features/applications/ExportSelectionBar'
+import { CvOptimizationView } from './features/cv-optimization/CvOptimizationView'
 import { Toolbar } from './features/applications/Toolbar'
 import { PinnedSection } from './features/followup/PinnedSection'
 import { BadgesDialog } from './features/gamification/BadgesDialog'
@@ -20,9 +21,16 @@ import { SettingsDialog } from './features/settings/SettingsDialog'
 import { useTheme } from './hooks/useTheme'
 import { useToday } from './hooks/useToday'
 import { getApi } from './lib/api'
+import { cn } from './lib/cn'
 import { useAppStore } from './stores/appStore'
 
 type FormTarget = { mode: 'create' } | { mode: 'edit'; application: Application } | null
+type View = 'applications' | 'cv'
+
+const VIEWS: { value: View; label: string; short: string; Icon: typeof Briefcase }[] = [
+  { value: 'applications', label: 'Bewerbungen', short: 'Bewerbungen', Icon: Briefcase },
+  { value: 'cv', label: 'CV-Optimierung', short: 'CV', Icon: Sparkles },
+]
 
 export function App() {
   const { status, error, data, celebration, hydrate, pushToast } = useAppStore()
@@ -36,6 +44,7 @@ export function App() {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [exporting, setExporting] = useState(false)
+  const [view, setView] = useState<View>('applications')
 
   useTheme(data.settings.theme)
 
@@ -135,6 +144,27 @@ export function App() {
               <p className="hidden text-xs text-muted sm:block">Deine Bewerbungen im Griff</p>
             </div>
           </div>
+          <nav
+            aria-label="Bereiche"
+            className="order-last flex w-full gap-1 rounded-xl bg-surface-2 p-1 sm:order-none sm:w-auto"
+          >
+            {VIEWS.map(({ value, label, short, Icon }) => (
+              <button
+                key={value}
+                type="button"
+                aria-current={view === value ? 'page' : undefined}
+                onClick={() => setView(value)}
+                className={cn(
+                  'inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition sm:flex-none',
+                  view === value ? 'bg-surface text-fg shadow-sm' : 'text-muted hover:text-fg',
+                )}
+              >
+                <Icon size={16} aria-hidden="true" />
+                <span className="hidden md:inline">{label}</span>
+                <span className="md:hidden">{short}</span>
+              </button>
+            ))}
+          </nav>
           <div className="order-last w-full sm:order-none sm:ml-auto sm:w-auto">
             <XpBar xp={data.progress.xp} onOpenBadges={() => setBadgesOpen(true)} />
           </div>
@@ -166,59 +196,52 @@ export function App() {
       </header>
 
       <main className="mx-auto flex max-w-[1600px] flex-col gap-6 px-4 py-6 sm:px-6">
-        <StatsBar data={data} today={today} />
-
-        {!hasApplications ? (
-          <EmptyState icon="🚀" title="Deine Jobsuche startet hier">
-            <p className="mb-4">
-              Lege deine erste Bewerbung an und sammle XP. Bewerbery erinnert dich, wann du dich
-              melden solltest.
-            </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button variant="primary" onClick={() => setForm({ mode: 'create' })}>
-                <Plus size={16} aria-hidden="true" /> Erste Bewerbung anlegen
-              </Button>
-              <Button variant="secondary" onClick={() => setImportOpen(true)}>
-                <FileUp size={16} aria-hidden="true" /> Aus Tabelle importieren
-              </Button>
-            </div>
-          </EmptyState>
+        {view === 'cv' ? (
+          <CvOptimizationView
+            settingsOpen={settingsOpen}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
         ) : (
           <>
-            <Toolbar
-              search={search}
-              onSearch={setSearch}
-              filter={filter}
-              onFilter={setFilter}
-              selectionMode={selectionMode}
-              onStartExport={startExportSelection}
-            />
-            {selectionMode && (
-              <ExportSelectionBar
-                selectedCount={selectedIds.size}
-                totalCount={visibleIds.length}
-                exporting={exporting}
-                onToggleSelectAll={toggleSelectAll}
-                onExport={() => void exportSelection()}
-                onCancel={cancelExportSelection}
-              />
-            )}
-            <PinnedSection
-              applications={pinned}
-              settings={data.settings}
-              today={today}
-              onEdit={onEdit}
-              selectionMode={selectionMode}
-              selectedIds={selectedIds}
-              onToggleSelect={toggleSelected}
-            />
-            {others.length > 0 && (
-              <section aria-labelledby="all-heading" className="flex flex-col gap-3">
-                <h2 id="all-heading" className="font-display text-base font-semibold">
-                  {pinned.length > 0 ? 'Weitere Bewerbungen' : 'Deine Bewerbungen'}
-                </h2>
-                <ApplicationGrid
-                  applications={others}
+            <StatsBar data={data} today={today} />
+
+            {!hasApplications ? (
+              <EmptyState icon="🚀" title="Deine Jobsuche startet hier">
+                <p className="mb-4">
+                  Lege deine erste Bewerbung an und sammle XP. Bewerbery erinnert dich, wann du dich
+                  melden solltest.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button variant="primary" onClick={() => setForm({ mode: 'create' })}>
+                    <Plus size={16} aria-hidden="true" /> Erste Bewerbung anlegen
+                  </Button>
+                  <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                    <FileUp size={16} aria-hidden="true" /> Aus Tabelle importieren
+                  </Button>
+                </div>
+              </EmptyState>
+            ) : (
+              <>
+                <Toolbar
+                  search={search}
+                  onSearch={setSearch}
+                  filter={filter}
+                  onFilter={setFilter}
+                  selectionMode={selectionMode}
+                  onStartExport={startExportSelection}
+                />
+                {selectionMode && (
+                  <ExportSelectionBar
+                    selectedCount={selectedIds.size}
+                    totalCount={visibleIds.length}
+                    exporting={exporting}
+                    onToggleSelectAll={toggleSelectAll}
+                    onExport={() => void exportSelection()}
+                    onCancel={cancelExportSelection}
+                  />
+                )}
+                <PinnedSection
+                  applications={pinned}
                   settings={data.settings}
                   today={today}
                   onEdit={onEdit}
@@ -226,12 +249,28 @@ export function App() {
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelected}
                 />
-              </section>
-            )}
-            {!hasResults && (
-              <EmptyState icon="🔍" title="Nichts gefunden">
-                Passe Suche oder Filter an.
-              </EmptyState>
+                {others.length > 0 && (
+                  <section aria-labelledby="all-heading" className="flex flex-col gap-3">
+                    <h2 id="all-heading" className="font-display text-base font-semibold">
+                      {pinned.length > 0 ? 'Weitere Bewerbungen' : 'Deine Bewerbungen'}
+                    </h2>
+                    <ApplicationGrid
+                      applications={others}
+                      settings={data.settings}
+                      today={today}
+                      onEdit={onEdit}
+                      selectionMode={selectionMode}
+                      selectedIds={selectedIds}
+                      onToggleSelect={toggleSelected}
+                    />
+                  </section>
+                )}
+                {!hasResults && (
+                  <EmptyState icon="🔍" title="Nichts gefunden">
+                    Passe Suche oder Filter an.
+                  </EmptyState>
+                )}
+              </>
             )}
           </>
         )}

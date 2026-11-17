@@ -1,0 +1,15 @@
+Frontend-Entwickler:in React (Junior/Mid)
+Lotsenhaus Software GmbH, Hamburg
+
+Was dich erwartet
+- Du entwickelst neue Funktionen für unsere Web-App mit React, TypeScript und Next.js.
+- Du sorgst für Barrierefreiheit (WCAG 2.2) und gute Performance.
+- Du schreibst Tests mit Vitest, Testing Library und Playwright.
+- Du arbeitest eng mit UX-Design in Figma zusammen und pflegst unser Design-System in Storybook.
+
+Was du mitbringst
+- Erste Berufserfahrung mit React und TypeScript
+- Sicherer Umgang mit HTML, CSS und Tailwind
+- Interesse an Barrierefreiheit und Design-Systemen
+- Grundkenntnisse in Git und CI/CD
+- Teamgeist und Lust, Neues zu lernen

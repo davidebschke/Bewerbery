@@ -49,6 +49,7 @@ describe('ApplicationForm', () => {
     await userEvent.type(screen.getByLabelText('Telefon'), '0301234')
     await userEvent.type(screen.getByLabelText('E-Mail'), 'blau@neu.de')
     await userEvent.type(screen.getByLabelText('Notizen'), 'Remote möglich')
+    await userEvent.type(screen.getByLabelText('Stellenanzeige'), 'Figma, Design-Systeme')
     await userEvent.selectOptions(screen.getByLabelText('Melden nach'), '3')
     await userEvent.click(screen.getByRole('button', { name: 'Bewerbung anlegen (+10 XP)' }))
 
@@ -59,6 +60,7 @@ describe('ApplicationForm', () => {
       contactPhone: '0301234',
       contactEmail: 'blau@neu.de',
       notes: 'Remote möglich',
+      jobDescription: 'Figma, Design-Systeme',
       followUpWeeks: 3,
       sentAt: '2026-09-23',
     })
@@ -66,7 +68,14 @@ describe('ApplicationForm', () => {
   })
 
   it('shows singular week label for a 1-week default', () => {
-    seedStore({ settings: { followUpWeeks: 1, notificationsEnabled: true, theme: 'system' } })
+    seedStore({
+      settings: {
+        followUpWeeks: 1,
+        notificationsEnabled: true,
+        theme: 'system',
+        aiConsentAt: null,
+      },
+    })
     renderForm()
     expect(screen.getByRole('option', { name: 'Standard (1 Woche)' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: '1 Woche' })).toBeInTheDocument()
@@ -93,6 +102,18 @@ describe('ApplicationForm', () => {
 
     expect(state().data.applications[0]).toMatchObject({ company: 'Neu', documents: [] })
     expect(api.removeDocument).toHaveBeenCalledWith(app.id, doc)
+  })
+
+  it('prefills and keeps the stored job description when editing', async () => {
+    const app = makeApplication({ company: 'Alt', position: 'Dev', jobDescription: 'React, TS' })
+    seedStore({ applications: [app] })
+    renderForm(app)
+    const field = screen.getByLabelText('Stellenanzeige')
+    expect(field).toHaveValue('React, TS')
+    expect(field).toHaveAttribute('maxLength', '15000')
+    await userEvent.type(field, ', Vitest')
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }))
+    expect(state().data.applications[0].jobDescription).toBe('React, TS, Vitest')
   })
 
   it('requires the position when editing a legacy application without one', async () => {

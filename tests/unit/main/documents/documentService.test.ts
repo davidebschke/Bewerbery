@@ -51,6 +51,24 @@ describe('documentService', () => {
     expect(await readFile(stored, 'utf8')).toBe('PDF-INHALT')
   })
 
+  it('stores generated content as a new document', async () => {
+    const service = createDocumentService(join(dir, 'docs'), now)
+    const bytes = new TextEncoder().encode('DOCX')
+
+    const doc = await service.importBuffer('app-1', 'Lebenslauf – ATS-optimiert.docx', bytes)
+    expect(doc).toMatchObject({
+      name: 'Lebenslauf – ATS-optimiert.docx',
+      size: 4,
+      addedAt: now().toISOString(),
+    })
+    expect(doc.storedName).toMatch(/-Lebenslauf_ATS-optimiert\.docx$/)
+    expect(await readFile(service.resolvePath('app-1', doc), 'utf8')).toBe('DOCX')
+
+    const second = await service.importBuffer('app-1', 'Lebenslauf – ATS-optimiert.docx', bytes)
+    expect(second.storedName).not.toBe(doc.storedName)
+    await expect(service.importBuffer('../x', 'a.docx', bytes)).rejects.toThrow()
+  })
+
   it('keeps duplicate names apart and skips directories', async () => {
     const service = createDocumentService(join(dir, 'docs'))
     const source = join(sourceDir, 'cv.pdf')

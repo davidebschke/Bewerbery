@@ -19,6 +19,35 @@ beforeEach(() => {
 })
 
 describe('appStore', () => {
+  it('attaches a stored document to an existing application', () => {
+    const existing = makeDocument('alt.pdf')
+    const app = makeApplication({ id: 'a1', documents: [existing] })
+    useAppStore.setState({ data: makeData({ applications: [app] }), status: 'ready' })
+
+    const variant = makeDocument('Lebenslauf – ATS-optimiert.docx')
+    store().attachDocument('a1', variant)
+    expect(store().data.applications[0].documents).toEqual([existing, variant])
+    expect(api.saveData).toHaveBeenCalledTimes(1)
+
+    store().attachDocument('fehlt', variant)
+    expect(api.saveData).toHaveBeenCalledTimes(1)
+  })
+
+  it('stores the job description of an existing application', () => {
+    const app = makeApplication({ id: 'a1' })
+    useAppStore.setState({ data: makeData({ applications: [app] }), status: 'ready' })
+
+    store().setJobDescription('a1', 'React, TypeScript')
+    expect(store().data.applications[0].jobDescription).toBe('React, TypeScript')
+    expect(api.saveData).toHaveBeenCalledTimes(1)
+
+    store().setJobDescription('a1', 'x'.repeat(15_010))
+    expect(store().data.applications[0].jobDescription).toHaveLength(15_000)
+
+    store().setJobDescription('fehlt', 'egal')
+    expect(api.saveData).toHaveBeenCalledTimes(2)
+  })
+
   it('hydrates from the api', async () => {
     const data = makeData({ applications: [makeApplication({ company: 'Loaded' })] })
     api.loadData.mockResolvedValueOnce(data)
