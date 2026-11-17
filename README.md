@@ -64,9 +64,25 @@ in den Notizen, damit nichts verloren geht. Eine ausfüllbare Vorlage gibt es al
 `.csv`. Importierte Bewerbungen zählen für XP und Abzeichen, gemeldet wird aber nur eine
 Sammelmeldung. Unternehmen, Position und Absendedatum sind Pflichtfelder.
 
-Alle Daten bleiben **zu 100 % lokal** auf dem Rechner (`%APPDATA%/Bewerbery` unter Windows bzw.
-`~/.config/Bewerbery` unter Linux) – keine Cloud, kein Tracking. Die App unterstützt hellen und
-dunklen Modus und ist responsiv ab 360 px Fensterbreite.
+In der Ansicht **„CV-Optimierung“** lässt sich der eigene Lebenslauf mit KI (Anthropic Claude) auf
+eine Stelle zuschneiden. Du wählst deinen Lebenslauf als Word- (`.docx`) oder LibreOffice-Datei
+(`.odt`) und eine Stellenanzeige – aus dem neuen Feld „Stellenanzeige“ einer Bewerbung oder als
+eingefügten Text. Die App erzeugt drei Varianten (Sachlich, Wirkungsstark, ATS-optimiert) und zeigt
+sie neben dem Original: je Spalte ein Match-Score (0–100) mit Abstand zum Original, abgedeckte und
+fehlende Keywords, die wichtigsten Änderungen und Warnungen, falls eine Variante Zahlen enthält, die
+nicht im Original stehen, oder deutlich länger wird. **Das Design bleibt erhalten:** Es wird nur der
+Text vorhandener Absätze ausgetauscht, Schriften, Farben, Tabellen, Textfelder und Bilder bleiben
+unverändert. Varianten werden im Format des Originals gespeichert („Speichern unter …“ oder direkt an
+der Bewerbung); PDF-Lebensläufe werden mit einer Anleitung zur Umwandlung in `.docx` abgelehnt. Das
+letzte Ergebnis bleibt nach einem Neustart erhalten.
+
+Alle Daten bleiben **lokal** auf dem Rechner (`%APPDATA%/Bewerbery` unter Windows bzw.
+`~/.config/Bewerbery` unter Linux) – keine Cloud, kein Tracking. **Einzige Ausnahme ist die
+CV-Optimierung (Opt-in):** Nur wenn du in den Einstellungen unter „KI-Assistent“ deinen eigenen
+Anthropic-API-Key hinterlegst und „Optimieren“ klickst, werden Lebenslauf-Text und Stellenanzeige an
+Anthropic gesendet; vor dem ersten Senden bestätigst du einen Datenschutzhinweis (widerrufbar). Der
+Key wird mit der Verschlüsselung des Betriebssystems gespeichert und verlässt den Hauptprozess nie.
+Die App unterstützt hellen und dunklen Modus und ist responsiv ab 360 px Fensterbreite.
 
 <a id="tech-stack-de"></a>
 
@@ -85,7 +101,8 @@ dunklen Modus und ist responsiv ab 360 px Fensterbreite.
 | date-fns 4                        | Datumsberechnungen (Fristen, Follow-ups)                     |
 | Motion                            | Animationen (Konfetti, dezente Übergänge)                    |
 | pdf-lib                           | PDF-Erzeugung für den Bewerbungs-Export (reines JS, keine nativen Module) |
-| fflate                            | ZIP-Lesen/-Schreiben für `.ods`/`.xlsx` beim Tabellen-Import (reines JS)   |
+| fflate                            | ZIP-Lesen/-Schreiben für `.ods`/`.xlsx` (Import) und `.docx`/`.odt` (CV-Optimierung), reines JS |
+| @anthropic-ai/sdk                 | Anbindung an Claude für die CV-Optimierung (nur im Hauptprozess, Opt-in)    |
 | Vitest 5 + Testing Library        | Unit- & Komponententests mit Coverage-Gate                   |
 | Playwright (Electron)             | End-to-End-Tests gegen die laufende App                      |
 | electron-builder 26               | Paketierung als Installer/portable/AppImage/tar.gz           |
@@ -97,16 +114,19 @@ dunklen Modus und ist responsiv ab 360 px Fensterbreite.
 ```text
 src/
 ├── shared/      Typen, Zod-Schemas, reine Domain-Logik (Fortschritt, Pinning, XP,
-│                Tabellen-Import: domain/import/)
+│                Tabellen-Import: domain/import/, CV-Optimierung: domain/cv/ inkl.
+│                DOCX/ODT-Zerlegung und -Rückschreiben), xml/ (positionsgenauer Tokenizer)
 ├── main/        Electron-Hauptprozess: storage/, documents/, notifications/, pdf/,
-│                import/ (CSV/ODS/XLSX lesen, Vorlagen schreiben), ipc/
+│                import/ (CSV/ODS/XLSX lesen, Vorlagen schreiben), ai/ (API-Key, Claude –
+│                einziger Ort mit Netzwerkzugriff), cv/ (CV-Dateien, Läufe, letztes Ergebnis), ipc/
 ├── preload/     typisierte window.api-Bridge
-└── renderer/    React-UI: features/ (applications, followup, gamification, import, settings),
-                 components/ui/, stores/, hooks/, lib/, assets/ (icon.png)
+└── renderer/    React-UI: features/ (applications, cv-optimization, followup, gamification,
+                 import, settings), components/ui/, stores/, hooks/, lib/, assets/ (icon.png)
 build/           Build-Ressourcen (icon.png = App-Icon der exe)
 tests/
 ├── unit/        Unit- & Komponententests (spiegelt die Struktur von src/)
-├── fixtures/    Testdateien, z. B. import/ für alle Import-Problemfälle (siehe README dort)
+├── fixtures/    Testdateien: import/ für alle Import-Problemfälle (siehe README dort),
+│                cv/ für gestaltete DOCX/ODT-Lebensläufe
 └── e2e/         Playwright-Tests
 scripts/         Build- & Wartungsskripte (Linux-Builds per Docker, Override-Prüfung,
                  Erzeugen der Import-Testdateien)
@@ -187,6 +207,11 @@ Ein Husky-Pre-Commit-Hook führt Typecheck, Lint und Tests automatisch aus.
 Die Testdateien für den Tabellen-Import liegen unter `tests/fixtures/import/` (Beschreibung und
 erwartete Ergebnisse in der dortigen README). Sie eignen sich auch zum manuellen Ausprobieren in der
 App. Neu erzeugen (benötigt LibreOffice): `node scripts/generate-import-samples.mjs`.
+
+Kein Test sendet echte Anfragen an Anthropic: Unit-Tests ersetzen den Claude-Client durch Fakes, die
+E2E-Tests starten die App mit `BEWERBERY_AI_FAKE=1` (deterministische Varianten und Scores, Key-Ablage
+ohne OS-Verschlüsselung). Ein Test stellt sicher, dass das Anthropic-SDK nur unter `src/main/ai/`
+verwendet wird.
 
 Die E2E-Tests lassen sich auch gegen die gepackte App ausführen:
 
@@ -283,8 +308,23 @@ notes so nothing gets lost. A fillable template is available as `.xlsx`, `.ods` 
 applications count towards XP and badges, but only a single summary notice is shown. Company,
 position and submission date are required fields.
 
-All data stays **100 % local** on the machine (`%APPDATA%/Bewerbery` on Windows, or
-`~/.config/Bewerbery` on Linux) – no cloud, no tracking. The app supports light and dark mode and is
+In the **"CV-Optimierung"** (CV optimisation) view you can tailor your CV to a job with AI
+(Anthropic Claude). You pick your CV as a Word (`.docx`) or LibreOffice (`.odt`) file and a job
+posting – from the new "Stellenanzeige" (job posting) field of an application or pasted as text. The
+app creates three variants (factual, impactful, ATS-optimised) and shows them next to the original:
+each column has a match score (0–100) with the difference to the original, covered and missing
+keywords, the key changes and warnings if a variant contains numbers that are not in the original or
+gets noticeably longer. **The design is preserved:** only the text of existing paragraphs is
+replaced; fonts, colours, tables, text boxes and images stay untouched. Variants are saved in the
+format of the original ("Save as …" or directly attached to the application); PDF CVs are rejected
+with instructions on converting them to `.docx`. The last result survives a restart.
+
+All data stays **local** on the machine (`%APPDATA%/Bewerbery` on Windows, or `~/.config/Bewerbery`
+on Linux) – no cloud, no tracking. **The only exception is the CV optimisation (opt-in):** only if
+you store your own Anthropic API key under "KI-Assistent" (AI assistant) in the settings and click
+"Optimieren" (optimise) are the CV text and the job posting sent to Anthropic; before the first
+request you confirm a privacy notice (revocable). The key is stored with the operating system's
+encryption and never leaves the main process. The app supports light and dark mode and is
 responsive down to a 360 px window width.
 
 <a id="tech-stack-en"></a>
@@ -304,7 +344,8 @@ responsive down to a 360 px window width.
 | date-fns 4                         | Date calculations (deadlines, follow-ups)                       |
 | Motion                             | Animations (confetti, subtle transitions)                       |
 | pdf-lib                            | PDF generation for the application export (pure JS, no native modules) |
-| fflate                             | ZIP reading/writing for `.ods`/`.xlsx` in the spreadsheet import (pure JS) |
+| fflate                             | ZIP reading/writing for `.ods`/`.xlsx` (import) and `.docx`/`.odt` (CV optimisation), pure JS |
+| @anthropic-ai/sdk                  | Claude integration for the CV optimisation (main process only, opt-in) |
 | Vitest 5 + Testing Library         | Unit & component tests with coverage gate                       |
 | Playwright (Electron)              | End-to-end tests against the running app                        |
 | electron-builder 26                | Packaging as installer/portable/AppImage/tar.gz                 |
@@ -316,16 +357,19 @@ responsive down to a 360 px window width.
 ```text
 src/
 ├── shared/      Types, Zod schemas, pure domain logic (progress, pinning, XP,
-│                spreadsheet import: domain/import/)
+│                spreadsheet import: domain/import/, CV optimisation: domain/cv/ incl.
+│                splitting and rewriting DOCX/ODT), xml/ (position-aware tokenizer)
 ├── main/        Electron main process: storage/, documents/, notifications/, pdf/,
-│                import/ (read CSV/ODS/XLSX, write templates), ipc/
+│                import/ (read CSV/ODS/XLSX, write templates), ai/ (API key, Claude – the
+│                only place with network access), cv/ (CV files, runs, last result), ipc/
 ├── preload/     typed window.api bridge
-└── renderer/    React UI: features/ (applications, followup, gamification, import, settings),
-                 components/ui/, stores/, hooks/, lib/, assets/ (icon.png)
+└── renderer/    React UI: features/ (applications, cv-optimization, followup, gamification,
+                 import, settings), components/ui/, stores/, hooks/, lib/, assets/ (icon.png)
 build/           Build resources (icon.png = app icon of the exe)
 tests/
 ├── unit/        Unit & component tests (mirrors the src/ structure)
-├── fixtures/    test files, e.g. import/ for every import edge case (see the README there)
+├── fixtures/    test files: import/ for every import edge case (see the README there),
+│                cv/ for styled DOCX/ODT CVs
 └── e2e/         Playwright tests
 scripts/         build & maintenance scripts (Linux builds via Docker, override check,
                  generating the import test files)
@@ -406,6 +450,10 @@ A Husky pre-commit hook automatically runs typecheck, lint and tests.
 The test files for the spreadsheet import live in `tests/fixtures/import/` (description and expected
 results in the README there). They are also handy for trying the import manually in the app.
 Regenerate them (requires LibreOffice): `node scripts/generate-import-samples.mjs`.
+
+No test sends real requests to Anthropic: unit tests replace the Claude client with fakes, the E2E
+tests start the app with `BEWERBERY_AI_FAKE=1` (deterministic variants and scores, key storage
+without OS encryption). A test ensures that the Anthropic SDK is only used under `src/main/ai/`.
 
 The E2E tests can also be run against the packaged app:
 
