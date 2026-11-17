@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto'
-import { copyFile, mkdir, rm, stat } from 'node:fs/promises'
+import { copyFile, mkdir, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import type { ApplicationDocument } from '@shared/types'
 
 export interface DocumentService {
   readonly rootDir: string
   importFiles(applicationId: string, filePaths: string[]): Promise<ApplicationDocument[]>
+  importBuffer(applicationId: string, name: string, bytes: Uint8Array): Promise<ApplicationDocument>
   resolvePath(applicationId: string, document: ApplicationDocument): string
   remove(applicationId: string, document: ApplicationDocument): Promise<void>
   removeAll(applicationId: string): Promise<void>
@@ -53,6 +54,20 @@ export function createDocumentService(
     return documents
   }
 
+  /** Legt erzeugte Inhalte (z. B. eine optimierte CV-Variante) als Dokument ab */
+  async function importBuffer(
+    applicationId: string,
+    name: string,
+    bytes: Uint8Array,
+  ): Promise<ApplicationDocument> {
+    const targetDir = applicationDir(applicationId)
+    await mkdir(targetDir, { recursive: true })
+    const id = randomUUID()
+    const storedName = `${id}-${sanitizeFileName(name)}`
+    await writeFile(join(targetDir, storedName), bytes)
+    return { id, name, storedName, size: bytes.length, addedAt: now().toISOString() }
+  }
+
   function resolvePath(applicationId: string, document: ApplicationDocument): string {
     return join(applicationDir(applicationId), assertSafeSegment(document.storedName))
   }
@@ -65,5 +80,5 @@ export function createDocumentService(
     await rm(applicationDir(applicationId), { recursive: true, force: true })
   }
 
-  return { rootDir, importFiles, resolvePath, remove, removeAll }
+  return { rootDir, importFiles, importBuffer, resolvePath, remove, removeAll }
 }

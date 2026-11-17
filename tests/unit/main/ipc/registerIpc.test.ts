@@ -33,6 +33,7 @@ function setup(overrides: Partial<IpcDeps> = {}) {
   const documents: DocumentService = {
     rootDir: 'root',
     importFiles: vi.fn(async () => [doc]),
+    importBuffer: vi.fn(async () => doc),
     resolvePath: vi.fn(() => 'root/app/d1-cv.pdf'),
     remove: vi.fn(async () => undefined),
     removeAll: vi.fn(async () => undefined),
