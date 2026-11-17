@@ -128,9 +128,11 @@
 
 ## R9 – Persistenz der Quelle und des letzten Ergebnisses
 
-- **Decision**: Beim Wählen einer CV-Datei kopiert der Main-Prozess sie nach `userData/cv/source.<ext>`
-  (ersetzt eine vorherige Quelle). Das Ergebnis liegt in `userData/cv/last-result.json`, atomar
-  geschrieben und beim Laden mit Zod validiert (ungültig → ignorieren und löschen). Varianten werden als
+- **Decision**: Die gewählte CV-Datei hält der Main-Prozess nur im Speicher. Nach einem erfolgreichen
+  Lauf werden Ergebnis und **zugehörige** Quelle gemeinsam abgelegt (`userData/cv/last-result.json` +
+  `userData/cv/last-source.<ext>`), atomar geschrieben und beim Laden mit Zod validiert (ungültig →
+  ignorieren und löschen). So kann eine später gewählte andere Datei das gespeicherte Ergebnis nicht
+  verfälschen (bei der Umsetzung erkannt). Varianten werden als
   Absatz-Ersetzungen gespeichert und erst beim Speichern mit der Quelle zu einer Datei zusammengesetzt.
   Nichts davon ist Teil von `AppData`.
 - **Rationale**: Das Ergebnis enthält vier vollständige CV-Texte. Würde es in `AppData` liegen, würde es

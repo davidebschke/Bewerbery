@@ -25,13 +25,13 @@ Typen siehe [data-model.md](../data-model.md).
 
 | Kanal | Methode | Nutzlast → Rückgabe | Verhalten |
 |---|---|---|---|
-| `cv:pick-file` | `pickCvFile()` | – → `AiResult<CvSource> \| null` | Dateidialog (Filter: DOCX, ODT). `null` = abgebrochen. Datei wird nach `userData/cv/source.<ext>` kopiert. Fehler: `pdf-not-supported`, `unsupported-file`, `file-too-large`, `unreadable-file`, `tracked-changes`, `no-text`, `too-long` |
+| `cv:pick-file` | `pickCvFile()` | – → `AiResult<CvSource> \| null` | Dateidialog (Filter: DOCX, ODT). `null` = abgebrochen. Die Datei wird nur im Speicher gehalten. Fehler: `pdf-not-supported`, `unsupported-file`, `file-too-large`, `unreadable-file`, `tracked-changes`, `no-text`, `too-long` |
 | `cv:read-file` | `readCvFile(path)` | `z.string().min(1)` → `AiResult<CvSource>` | Für Drag & Drop (Pfad via `getPathForFile`) |
 | `cv:optimize` | `optimizeCv(request)` | `cvOptimizationRequestSchema` → `AiResult<CvOptimizationResult>` | Verwendet die aktuelle Quelle. Fehler u. a. `no-key`, `no-source`, `busy`. Bei Erfolg wird das Ergebnis als letztes Ergebnis gespeichert |
 | `cv:cancel` | `cancelCvOptimization()` | – → `void` | Bricht den laufenden Lauf ab. Der wartende `optimizeCv`-Aufruf liefert `canceled` |
 | `cv:last-result` | `getLastCvResult()` | – → `CvOptimizationResult \| null` | Ungültige Datei oder fehlende Quelle → `null` |
 | `cv:clear-last-result` | `clearLastCvResult()` | – → `void` | Löscht Ergebnis und Quelle |
-| `cv:save-variant` | `saveCvVariant(style)` | `variantStyleSchema` → `AiResult<FileSaveOutcome>` | Speichern-Dialog mit Vorschlag `<Name> – <Stil>.<ext>`. Schreibt die Quelle mit den Ersetzungen der Variante aus dem letzten Ergebnis |
+| `cv:save-variant` | `saveCvVariant(style)` | `variantStyleSchema` → `AiResult<FileSaveOutcome>` | Speichern-Dialog mit Vorschlag `<Name> – <Stil>.<ext>`. Schreibt die Quelle des letzten Ergebnisses mit den Ersetzungen der Variante. Schreibfehler → `save-failed` |
 | `cv:attach-variant` | `attachCvVariant(style, applicationId)` | `variantStyleSchema`, `idSchema` → `AiResult<ApplicationDocument>` | Legt die Datei im Originaldesign im Dokumentordner der Bewerbung ab. Der Renderer hängt das Dokument über den Store an |
 
 **Netzwerk-Invariante** (FR-007, SC-005): Nur `ai:test-key` und `cv:optimize` lösen Netzwerkanfragen aus,

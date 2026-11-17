@@ -34,7 +34,8 @@ Eingabe: `apiKeySchema = z.string().trim().min(20).max(400).regex(/^\S+$/)`.
 
 ## 4. CV-Quelle – `cvSourceSchema`
 
-Wird beim Wählen der Datei im Main erzeugt. Die Datei selbst liegt unter `userData/cv/source.<ext>`.
+Wird beim Wählen der Datei im Main erzeugt und nur im Speicher gehalten. Erst nach einem erfolgreichen
+Lauf wird die Datei zusammen mit dem Ergebnis unter `userData/cv/last-source.<ext>` abgelegt.
 
 | Feld | Typ | Regel |
 |---|---|---|
@@ -112,7 +113,7 @@ Abgeleitet: `scoreDelta`, `formatDelta` („+18“ / „−3“ / „±0“) und
 entscheidet die Reihenfolge der Stile. Liegt keine Variante über dem Original, wird keine markiert, und
 es erscheint der Hinweis „Keine Variante übertrifft das Original“.
 
-Persistenz: `userData/cv/last-result.json` + `userData/cv/source.<ext>` (Research R9).
+Persistenz: `userData/cv/last-result.json` + `userData/cv/last-source.<ext>` (Research R9).
 
 ## 10. KI-Antwortformate (Structured Outputs, nur Main)
 
@@ -125,7 +126,7 @@ Sie liegen in `src/shared/domain/cv/schemas.ts`.
 
 | Funktion | Zweck |
 |---|---|
-| `tokenizeXml(xml)` | Tokens mit `start`/`end`-Offsets (positionsgenau, ohne DTD- bzw. Entity-Auflösung) |
+| `tokenizeXml(xml)` | Tokens mit `start`/`end`-Offsets (positionsgenau, ohne DTD- bzw. Entity-Auflösung); liegt als allgemeiner Baustein in `src/shared/xml/tokens.ts` und wird auch vom Tabellen-Import genutzt |
 | `parseDocxParagraphs(xml)` | → `{ paragraphs, textNodes, hasTrackedChanges }`. Die Textknoten werden je Segment mit Offsets gemerkt |
 | `parseOdtParagraphs(xml)` | dasselbe für `content.xml` |
 | `rewriteXml(xml, nodes, rewrites)` | ersetzt Textknoten per Splicing von hinten nach vorn, escaped `& < > "` und kodiert Leerzeichen (ODT: `text:s`) |
@@ -137,7 +138,8 @@ Haupt-XML werden byte-identisch übernommen, bei ODT bleibt `mimetype` der erste
 
 `'no-key' | 'encryption-unavailable' | 'invalid-key' | 'network' | 'rate-limit' | 'too-long' |
 'bad-response' | 'refused' | 'server' | 'canceled' | 'busy' | 'no-source' | 'unsupported-file' |
-'pdf-not-supported' | 'file-too-large' | 'unreadable-file' | 'tracked-changes' | 'no-text'`
+'pdf-not-supported' | 'file-too-large' | 'unreadable-file' | 'tracked-changes' | 'no-text' |
+'save-failed'`
 
 Zu jedem Code gibt es in `AI_ERROR_MESSAGES` einen deutschen `title` und einen `hint`. `pdf-not-supported`
 enthält die Anleitung „Wähle die Word-Datei deines Lebenslaufs oder öffne die PDF in Word und speichere
