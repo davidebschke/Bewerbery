@@ -1,0 +1,235 @@
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fail, ok, type AiResult } from '@shared/domain/cv/aiErrors'
+import type { AssessmentOutput, GenerationOutput } from '@shared/domain/cv/schemas'
+import type { VariantStyle } from '@shared/domain/cv/styles'
+import type { AiClient } from '../../../../src/main/ai/claudeClient'
+import { createCvService, type CvServiceDeps } from '../../../../src/main/cv/cvService'
+import { buildDocx, buildOdt, PDF_BYTES } from '../../../fixtures/cv/buildFixtures'
+
+const KEY = 'sk-ant-api03-test'
+const REQUEST = {
+  jobDescription: 'React, TypeScript, Vitest',
+  applicationId: 'app-1',
+  jobTitle: 'Dev',
+}
+
+const raw = (score: number) => ({
+  score,
+  coveredKeywords: ['React', 'Kubernetes'],
+  missingKeywords: ['Vitest'],
+})
+const ASSESSMENT: AssessmentOutput = {
+  original: raw(50),
+  factual: raw(70),
+  impactful: raw(75),
+  ats: raw(80),
+}
+
+function generation(style: VariantStyle): GenerationOutput {
+  const texts: Record<VariantStyle, string> = {
+    factual: 'Senior Frontend-Entwickler',
+    impactful: 'Frontend-Entwickler mit 12 Projekten',
+    ats: 'Frontend-Entwickler (React)',
+  }
+  return {
+    paragraphs: [
+      { id: 'p2', segments: ['2019 – 2023', texts[style]] },
+      { id: 'p99', segments: ['unbekannt'] },
+    ],
+    changes: style === 'factual' ? ['  ', ''] : ['Titel geschärft', ...Array(6).fill('mehr')],
+  }
+}
+
+let dir: string
+let docxPath: string
+
+beforeEach(async () => {
+  dir = await mkdtemp(join(tmpdir(), 'bewerbery-cv-'))
+  docxPath = join(dir, 'Lebenslauf.docx')
+  await writeFile(docxPath, buildDocx())
+})
+
+afterEach(async () => {
+  await rm(dir, { recursive: true, force: true })
+})
+
+function setup(overrides: Partial<CvServiceDeps> = {}, ai: Partial<AiClient> = {}) {
+  const deps: CvServiceDeps = {
+    dir,
+    secrets: { get: vi.fn(async () => KEY) },
+    ai: {
+      generateVariant: vi.fn(async (_key, style: VariantStyle) => ok(generation(style))),
+      assessAll: vi.fn(async () => ok(ASSESSMENT)),
+      ...ai,
+    },
+    now: () => new Date('2026-11-17T10:00:00.000Z'),
+    newId: () => 'result-1',
+    ...overrides,
+  }
+  return { deps, service: createCvService(deps) }
+}
+
+describe('cvService.loadSource', () => {
+  it('reads the cv and keeps a copy as current source', async () => {
+    const { service } = setup()
+    const result = await service.loadSource(docxPath)
+    if (!result.ok) throw new Error(result.error)
+    expect(result.value.fileName).toBe('Lebenslauf.docx')
+    expect(await readdir(join(dir, 'cv'))).toEqual(['source.docx'])
+
+    const odtPath = join(dir, 'CV.odt')
+    await writeFile(odtPath, buildOdt())
+    expect((await service.loadSource(odtPath)).ok).toBe(true)
+    expect(await readdir(join(dir, 'cv'))).toEqual(['source.odt'])
+  })
+
+  it('rejects pdfs, oversized and unreadable files', async () => {
+    const { service } = setup()
+    const pdf = join(dir, 'cv.pdf')
+    await writeFile(pdf, PDF_BYTES)
+    expect(await service.loadSource(pdf)).toEqual({ ok: false, error: 'pdf-not-supported' })
+
+    const big = join(dir, 'gross.docx')
+    await writeFile(big, new Uint8Array(10 * 1024 * 1024 + 1))
+    expect(await service.loadSource(big)).toEqual({ ok: false, error: 'file-too-large' })
+    const bigPdf = join(dir, 'gross.pdf')
+    await writeFile(bigPdf, new Uint8Array(10 * 1024 * 1024 + 1))
+    expect(await service.loadSource(bigPdf)).toEqual({ ok: false, error: 'pdf-not-supported' })
+
+    expect(await service.loadSource(join(dir, 'fehlt.docx'))).toEqual({
+      ok: false,
+      error: 'unreadable-file',
+    })
+  })
+})
+
+describe('cvService.optimize', () => {
+  it('requires a key and a source', async () => {
+    const noKey = setup({ secrets: { get: vi.fn(async () => null) } })
+    expect(await noKey.service.optimize(REQUEST)).toEqual({ ok: false, error: 'no-key' })
+    const { service } = setup()
+    expect(await service.optimize(REQUEST)).toEqual({ ok: false, error: 'no-source' })
+  })
+
+  it('generates three variants in parallel and assesses them together', async () => {
+    const { service, deps } = setup()
+    await service.loadSource(docxPath)
+    const result = await service.optimize(REQUEST)
+    if (!result.ok) throw new Error(result.error)
+
+    expect(deps.ai.generateVariant).toHaveBeenCalledTimes(3)
+    const texts = vi.mocked(deps.ai.assessAll).mock.calls[0][1]
+    expect(texts.original).toContain('2019 – 2023 Frontend-Entwickler')
+    expect(texts.ats).toContain('2019 – 2023 Frontend-Entwickler (React)')
+
+    const value = result.value
+    expect(value).toMatchObject({
+      id: 'result-1',
+      createdAt: '2026-11-17T10:00:00.000Z',
+      applicationId: 'app-1',
+      jobTitle: 'Dev',
+    })
+    expect(value.originalAssessment).toEqual({
+      score: 50,
+      coveredKeywords: ['React'],
+      missingKeywords: ['Kubernetes', 'Vitest'],
+    })
+    expect(value.variants.map((variant) => variant.style)).toEqual(['factual', 'impactful', 'ats'])
+
+    const [factual, impactful, ats] = value.variants
+    expect(factual.rewrites).toEqual({ p2: ['2019 – 2023', 'Senior Frontend-Entwickler'] })
+    expect(factual.changes).toEqual(['Formulierungen an die Stellenanzeige angepasst'])
+    expect(impactful.changes).toHaveLength(5)
+    expect(impactful.inventedNumbers).toEqual(['12'])
+    expect(ats.assessment.coveredKeywords).toEqual(['React'])
+    expect(ats.lengthRatio).toBeGreaterThan(1)
+    expect(factual.inventedNumbers).toEqual([])
+  })
+
+  it('aborts the remaining styles when one fails and reports its error', async () => {
+    const signals: AbortSignal[] = []
+    const { service } = setup(
+      {},
+      {
+        generateVariant: vi.fn(async (_key, style: VariantStyle, _source, _job, signal) => {
+          signals.push(signal!)
+          if (style === 'impactful') return fail('rate-limit')
+          await new Promise((resolve) => setTimeout(resolve, 5))
+          return signal!.aborted ? fail('canceled') : ok(generation(style))
+        }),
+      },
+    )
+    await service.loadSource(docxPath)
+    expect(await service.optimize(REQUEST)).toEqual({ ok: false, error: 'rate-limit' })
+    expect(signals.every((signal) => signal.aborted)).toBe(true)
+    expect(service.isRunning()).toBe(false)
+  })
+
+  it('reports assessment errors', async () => {
+    const { service } = setup({}, { assessAll: vi.fn(async () => fail('bad-response')) })
+    await service.loadSource(docxPath)
+    expect(await service.optimize(REQUEST)).toEqual({ ok: false, error: 'bad-response' })
+  })
+
+  it('allows only one run at a time and can be canceled', async () => {
+    let release: () => void = () => undefined
+    const { service } = setup(
+      {},
+      {
+        generateVariant: vi.fn(
+          (_key, style: VariantStyle, _source, _job, signal) =>
+            new Promise<AiResult<GenerationOutput>>((resolve) => {
+              release = () => resolve(ok(generation(style)))
+              signal!.addEventListener('abort', () => resolve(fail('canceled')))
+            }),
+        ),
+      },
+    )
+    await service.loadSource(docxPath)
+    const running = service.optimize(REQUEST)
+    await vi.waitFor(() => expect(service.isRunning()).toBe(true))
+    expect(await service.optimize(REQUEST)).toEqual({ ok: false, error: 'busy' })
+
+    service.cancel()
+    expect(await running).toEqual({ ok: false, error: 'canceled' })
+    expect(service.isRunning()).toBe(false)
+    release()
+    service.cancel()
+  })
+
+  it('reports canceled even when the ai finishes after the user canceled', async () => {
+    let finish: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => (finish = resolve))
+    const { service } = setup(
+      {},
+      {
+        generateVariant: vi.fn(async (_key, style: VariantStyle) => {
+          await gate
+          return ok(generation(style))
+        }),
+      },
+    )
+    await service.loadSource(docxPath)
+    const running = service.optimize(REQUEST)
+    await vi.waitFor(() => expect(service.isRunning()).toBe(true))
+    service.cancel()
+    finish()
+    expect(await running).toEqual({ ok: false, error: 'canceled' })
+  })
+
+  it('turns unexpected exceptions into server errors', async () => {
+    const { service } = setup(
+      {},
+      {
+        assessAll: vi.fn(async () => {
+          throw new Error('boom')
+        }),
+      },
+    )
+    await service.loadSource(docxPath)
+    expect(await service.optimize(REQUEST)).toEqual({ ok: false, error: 'server' })
+  })
+})
