@@ -20,6 +20,14 @@ export interface ComparisonViewProps {
 
 const DATE_FORMAT = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' })
 
+/** Kurze Beschriftungen, damit vier Tabs ab 360 px nebeneinander passen */
+const TAB_LABELS: Record<ColumnKey, string> = {
+  original: 'Original',
+  factual: 'Sachlich',
+  impactful: 'Wirkung',
+  ats: 'ATS',
+}
+
 /** Original und drei Varianten nebeneinander – auf schmalen Fenstern als Tabs */
 export function ComparisonView({
   result,
@@ -36,6 +44,7 @@ export function ComparisonView({
   const tabRefs = useRef<Partial<Record<ColumnKey, HTMLButtonElement | null>>>({})
 
   const label = (key: ColumnKey) => (key === 'original' ? 'Original' : VARIANT_STYLE_LABELS[key])
+  const shortLabel = (key: ColumnKey) => TAB_LABELS[key]
 
   function onTabKey(event: KeyboardEvent) {
     const offset = { ArrowRight: 1, ArrowLeft: -1 }[event.key]
@@ -68,7 +77,7 @@ export function ComparisonView({
       <div
         role="tablist"
         aria-label="Version auswählen"
-        className="flex gap-1 overflow-x-auto rounded-xl bg-surface-2 p-1 md:hidden"
+        className="grid grid-cols-4 gap-1 rounded-xl bg-surface-2 p-1 md:hidden"
         onKeyDown={onTabKey}
       >
         {columns.map((key) => (
@@ -79,6 +88,7 @@ export function ComparisonView({
             }}
             role="tab"
             id={`${baseId}-tab-${key}`}
+            aria-label={label(key)}
             aria-selected={selected === key}
             aria-controls={`${baseId}-panel-${key}`}
             tabIndex={selected === key ? 0 : -1}
@@ -88,7 +98,7 @@ export function ComparisonView({
               selected === key ? 'bg-surface text-fg shadow-sm' : 'text-muted',
             )}
           >
-            {label(key)}
+            {shortLabel(key)}
           </button>
         ))}
       </div>

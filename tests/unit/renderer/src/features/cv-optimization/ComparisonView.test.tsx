@@ -30,6 +30,8 @@ describe('ComparisonView', () => {
   it('switches versions via tabs and arrow keys on narrow windows', async () => {
     renderView()
     const tabs = screen.getAllByRole('tab')
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Original', 'Sachlich', 'Wirkung', 'ATS'])
+    expect(screen.getByRole('tab', { name: 'ATS-optimiert' })).toBe(tabs[3])
     expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual([
       'false',
       'false',

@@ -144,7 +144,10 @@ export function App() {
               <p className="hidden text-xs text-muted sm:block">Deine Bewerbungen im Griff</p>
             </div>
           </div>
-          <nav aria-label="Bereiche" className="flex gap-1 rounded-xl bg-surface-2 p-1">
+          <nav
+            aria-label="Bereiche"
+            className="order-last flex w-full gap-1 rounded-xl bg-surface-2 p-1 sm:order-none sm:w-auto"
+          >
             {VIEWS.map(({ value, label, short, Icon }) => (
               <button
                 key={value}
@@ -152,7 +155,7 @@ export function App() {
                 aria-current={view === value ? 'page' : undefined}
                 onClick={() => setView(value)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition',
+                  'inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition sm:flex-none',
                   view === value ? 'bg-surface text-fg shadow-sm' : 'text-muted hover:text-fg',
                 )}
               >
