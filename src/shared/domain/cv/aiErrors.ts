@@ -21,6 +21,7 @@ export const AI_ERROR_CODES = [
   'unreadable-file',
   'tracked-changes',
   'no-text',
+  'save-failed',
 ] as const
 
 export type AiErrorCode = (typeof AI_ERROR_CODES)[number]
@@ -102,6 +103,10 @@ export const AI_ERROR_MESSAGES: Record<AiErrorCode, AiErrorMessage> = {
   'no-text': {
     title: 'Kein Text gefunden',
     hint: 'Die Datei enthält keinen bearbeitbaren Text, z. B. weil der Lebenslauf nur als Bild eingefügt ist.',
+  },
+  'save-failed': {
+    title: 'Datei konnte nicht gespeichert werden',
+    hint: 'Ist die Datei noch in Word geöffnet oder der Ordner schreibgeschützt? Schließe sie und versuche es erneut.',
   },
 }
 

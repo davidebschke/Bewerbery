@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -6,7 +6,12 @@ import { fail, ok, type AiResult } from '@shared/domain/cv/aiErrors'
 import type { AssessmentOutput, GenerationOutput } from '@shared/domain/cv/schemas'
 import type { VariantStyle } from '@shared/domain/cv/styles'
 import type { AiClient } from '../../../../src/main/ai/claudeClient'
-import { createCvService, type CvServiceDeps } from '../../../../src/main/cv/cvService'
+import { readCvDocument } from '../../../../src/main/cv/cvDocument'
+import {
+  createCvService,
+  variantFileName,
+  type CvServiceDeps,
+} from '../../../../src/main/cv/cvService'
 import { buildDocx, buildOdt, PDF_BYTES } from '../../../fixtures/cv/buildFixtures'
 
 const KEY = 'sk-ant-api03-test'
@@ -65,12 +70,103 @@ function setup(overrides: Partial<CvServiceDeps> = {}, ai: Partial<AiClient> = {
       assessAll: vi.fn(async () => ok(ASSESSMENT)),
       ...ai,
     },
+    documents: {
+      importBuffer: vi.fn(async (_id: string, name: string, bytes: Uint8Array) => ({
+        id: 'd1',
+        name,
+        storedName: `d1-${name}`,
+        size: bytes.length,
+        addedAt: '2026-11-17T10:00:00.000Z',
+      })),
+    },
     now: () => new Date('2026-11-17T10:00:00.000Z'),
     newId: () => 'result-1',
     ...overrides,
   }
   return { deps, service: createCvService(deps) }
 }
+
+describe('variantFileName', () => {
+  it('appends the style label before the extension', () => {
+    expect(variantFileName('Lebenslauf.docx', 'ats')).toBe('Lebenslauf – ATS-optimiert.docx')
+    expect(variantFileName('CV.v2.odt', 'factual')).toBe('CV.v2 – Sachlich.odt')
+    expect(variantFileName('ohne-endung', 'impactful')).toBe('ohne-endung – Wirkungsstark')
+  })
+})
+
+describe('cvService variants', () => {
+  async function optimized() {
+    const setupResult = setup()
+    await setupResult.service.loadSource(docxPath)
+    const result = await setupResult.service.optimize(REQUEST)
+    if (!result.ok) throw new Error(result.error)
+    return setupResult
+  }
+
+  it('needs a finished optimization', async () => {
+    const { service } = setup()
+    expect(await service.saveVariant('ats', vi.fn())).toEqual({ ok: false, error: 'no-source' })
+    expect(await service.attachVariant('ats', 'app-1')).toEqual({ ok: false, error: 'no-source' })
+  })
+
+  it('saves a variant in the original design to the chosen path', async () => {
+    const { service } = await optimized()
+    const target = join(dir, 'Ziel.docx')
+    const choose = vi.fn(async () => target)
+
+    expect(await service.saveVariant('factual', choose)).toEqual({
+      ok: true,
+      value: { canceled: false, filePath: target },
+    })
+    expect(choose).toHaveBeenCalledWith('Lebenslauf – Sachlich.docx', 'docx')
+
+    const written = readCvDocument(new Uint8Array(await readFile(target)), 'Ziel.docx')
+    if (!written.ok) throw new Error(written.error)
+    expect(written.value.source.paragraphs[2].segments).toEqual([
+      '2019 – 2023',
+      'Senior Frontend-Entwickler',
+    ])
+    const original = readCvDocument(buildDocx(), 'x.docx')
+    if (!original.ok) throw new Error(original.error)
+    expect(written.value.source.paragraphs.map((p) => p.segments.length)).toEqual(
+      original.value.source.paragraphs.map((p) => p.segments.length),
+    )
+  })
+
+  it('keeps using the source of the result after another file was loaded', async () => {
+    const { service } = await optimized()
+    const odtPath = join(dir, 'Anderer.odt')
+    await writeFile(odtPath, buildOdt())
+    await service.loadSource(odtPath)
+    const choose = vi.fn(async () => null)
+    expect(await service.saveVariant('ats', choose)).toEqual({
+      ok: true,
+      value: { canceled: true },
+    })
+    expect(choose).toHaveBeenCalledWith('Lebenslauf – ATS-optimiert.docx', 'docx')
+  })
+
+  it('reports write errors', async () => {
+    const { service } = await optimized()
+    const choose = vi.fn(async () => join(dir, 'fehlt', 'ordner', 'x.docx'))
+    expect(await service.saveVariant('ats', choose)).toEqual({ ok: false, error: 'save-failed' })
+  })
+
+  it('attaches a variant to an application', async () => {
+    const { service, deps } = await optimized()
+    const result = await service.attachVariant('impactful', 'app-1')
+    expect(result).toMatchObject({ ok: true, value: { name: 'Lebenslauf – Wirkungsstark.docx' } })
+    const [id, name, bytes] = vi.mocked(deps.documents.importBuffer).mock.calls[0]
+    expect([id, name]).toEqual(['app-1', 'Lebenslauf – Wirkungsstark.docx'])
+    expect(readCvDocument(bytes, name).ok).toBe(true)
+
+    vi.mocked(deps.documents.importBuffer).mockRejectedValueOnce(new Error('disk'))
+    expect(await service.attachVariant('ats', 'app-1')).toEqual({
+      ok: false,
+      error: 'save-failed',
+    })
+  })
+})
 
 describe('cvService.loadSource', () => {
   it('reads the cv and keeps a copy as current source', async () => {

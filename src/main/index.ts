@@ -7,7 +7,7 @@ import type { AppData } from '@shared/types'
 import { createAiClient } from './ai/claudeClient'
 import { createFakeAiClient, fakeCrypto, isAiFakeMode } from './ai/fakeAi'
 import { createSecretStore, type SecretCrypto } from './ai/secretStore'
-import { CV_EXTENSIONS } from './cv/cvDocument'
+import { CV_EXTENSIONS, CV_FORMAT_LABELS } from './cv/cvDocument'
 import { createCvService } from './cv/cvService'
 import { createDocumentService } from './documents/documentService'
 import { createImportService, IMPORT_EXTENSIONS } from './import/importService'
@@ -64,6 +64,7 @@ app.whenReady().then(() => {
   const userData = app.getPath('userData')
   const secrets = createSecretStore(userData, aiFake ? fakeCrypto : osCrypto)
   const ai = aiFake ? createFakeAiClient() : createAiClient()
+  const documents = createDocumentService(join(userData, DOCUMENTS_DIR_NAME))
   const reminders = createReminderService(({ title, body }) => {
     if (Notification.isSupported()) new Notification({ title, body }).show()
   })
@@ -71,7 +72,7 @@ app.whenReady().then(() => {
   registerIpc({
     ipcMain,
     dataStore: createDataStore(userData),
-    documents: createDocumentService(join(userData, DOCUMENTS_DIR_NAME)),
+    documents,
     pdfExport: createPdfExportService(async (suggestedName) => {
       const result = await dialog.showSaveDialog({
         title: 'PDF speichern',
@@ -104,9 +105,18 @@ app.whenReady().then(() => {
       dir: userData,
       secrets,
       ai,
+      documents,
       now: () => new Date(),
       newId: () => randomUUID(),
     }),
+    saveCvFile: async (suggestedName, format) => {
+      const result = await dialog.showSaveDialog({
+        title: 'Lebenslauf-Variante speichern',
+        defaultPath: suggestedName,
+        filters: [{ name: CV_FORMAT_LABELS[format], extensions: [format] }],
+      })
+      return result.canceled || !result.filePath ? null : result.filePath
+    },
     pickCvFile: async () => {
       const result = await dialog.showOpenDialog({
         title: 'Lebenslauf wählen',

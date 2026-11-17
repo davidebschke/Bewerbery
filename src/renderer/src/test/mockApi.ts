@@ -45,6 +45,14 @@ export function installMockApi(data: AppData = createEmptyData()): MockApi {
     readCvFile: vi.fn(async () => ({ ok: true, value: makeCvSource() })),
     optimizeCv: vi.fn(async () => ({ ok: true, value: makeCvResult() })),
     cancelCvOptimization: vi.fn(async () => undefined),
+    saveCvVariant: vi.fn(async () => ({
+      ok: true,
+      value: { canceled: false, filePath: 'C:/Lebenslauf – ATS-optimiert.docx' },
+    })),
+    attachCvVariant: vi.fn(async () => ({
+      ok: true,
+      value: makeDocument('Lebenslauf – ATS-optimiert.docx'),
+    })),
   } as unknown as MockApi
   window.api = api
   return api

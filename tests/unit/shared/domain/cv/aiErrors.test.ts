@@ -9,7 +9,7 @@ import {
 
 describe('aiErrors', () => {
   it('has a german title and hint for every code', () => {
-    expect(AI_ERROR_CODES).toHaveLength(18)
+    expect(AI_ERROR_CODES).toHaveLength(19)
     for (const code of AI_ERROR_CODES) {
       expect(AI_ERROR_MESSAGES[code].title.length).toBeGreaterThan(0)
       expect(AI_ERROR_MESSAGES[code].hint.length).toBeGreaterThan(0)

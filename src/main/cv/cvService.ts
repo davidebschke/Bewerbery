@@ -1,4 +1,4 @@
-import { readFile, stat } from 'node:fs/promises'
+import { readFile, stat, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { MAX_CV_FILE_BYTES, MAX_VARIANT_CHANGES } from '@shared/constants'
 import { fail, ok, type AiResult } from '@shared/domain/cv/aiErrors'
@@ -6,17 +6,26 @@ import { normalizeAssessment } from '@shared/domain/cv/assessment'
 import { findInventedNumbers } from '@shared/domain/cv/plausibility'
 import { lengthRatio, mergeRewrite, variantText, type Rewrites } from '@shared/domain/cv/rewrite'
 import type {
+  CvFormat,
   CvOptimizationRequest,
   CvOptimizationResult,
   CvSource,
   CvVariant,
   GenerationOutput,
 } from '@shared/domain/cv/schemas'
-import { VARIANT_STYLES, type VariantStyle } from '@shared/domain/cv/styles'
+import { VARIANT_STYLE_LABELS, VARIANT_STYLES, type VariantStyle } from '@shared/domain/cv/styles'
+import type { FileSaveOutcome } from '@shared/ipc'
+import type { ApplicationDocument } from '@shared/types'
 import type { AiClient } from '../ai/claudeClient'
 import type { SecretStore } from '../ai/secretStore'
+import type { DocumentService } from '../documents/documentService'
 import { removeFileIfExists, writeFileAtomic } from '../storage/atomicWrite'
-import { checkCvFileName, readCvDocument, type LoadedCvDocument } from './cvDocument'
+import {
+  checkCvFileName,
+  readCvDocument,
+  writeCvDocument,
+  type LoadedCvDocument,
+} from './cvDocument'
 
 export const CV_DIR_NAME = 'cv'
 const DEFAULT_CHANGE = 'Formulierungen an die Stellenanzeige angepasst'
@@ -26,9 +35,13 @@ export interface CvServiceDeps {
   dir: string
   secrets: Pick<SecretStore, 'get'>
   ai: Pick<AiClient, 'generateVariant' | 'assessAll'>
+  documents: Pick<DocumentService, 'importBuffer'>
   now(): Date
   newId(): string
 }
+
+/** Fragt den Zielpfad für eine Variante ab; `null` = abgebrochen */
+export type ChooseVariantPath = (suggestedName: string, format: CvFormat) => Promise<string | null>
 
 export interface CvService {
   /** Liest einen Lebenslauf ein und merkt ihn als aktuelle Quelle */
@@ -37,11 +50,38 @@ export interface CvService {
   /** Bricht einen laufenden Lauf ab; der wartende Aufruf liefert `canceled` */
   cancel(): void
   isRunning(): boolean
+  /** Schreibt eine Variante des letzten Ergebnisses im Originaldesign an einen gewählten Ort */
+  saveVariant(
+    style: VariantStyle,
+    choosePath: ChooseVariantPath,
+  ): Promise<AiResult<FileSaveOutcome>>
+  /** Legt eine Variante des letzten Ergebnisses als Dokument an einer Bewerbung ab */
+  attachVariant(style: VariantStyle, applicationId: string): Promise<AiResult<ApplicationDocument>>
 }
 
 interface CurrentSource {
   bytes: Uint8Array
   document: LoadedCvDocument
+}
+
+/** Letztes Ergebnis mit der Quelle, aus der es entstanden ist */
+interface LastRun {
+  result: CvOptimizationResult
+  source: CurrentSource
+}
+
+interface VariantFile {
+  fileName: string
+  format: CvFormat
+  bytes: Uint8Array
+}
+
+/** „Lebenslauf.docx“ + ATS → „Lebenslauf – ATS-optimiert.docx“ */
+export function variantFileName(fileName: string, style: VariantStyle): string {
+  const dot = fileName.lastIndexOf('.')
+  const base = dot > 0 ? fileName.slice(0, dot) : fileName
+  const extension = dot > 0 ? fileName.slice(dot) : ''
+  return `${base} – ${VARIANT_STYLE_LABELS[style]}${extension}`
 }
 
 function cleanChanges(changes: string[]): string[] {
@@ -52,8 +92,50 @@ function cleanChanges(changes: string[]): string[] {
 export function createCvService(deps: CvServiceDeps): CvService {
   const cvDir = join(deps.dir, CV_DIR_NAME)
   let current: CurrentSource | null = null
+  let last: LastRun | null = null
   let controller: AbortController | null = null
   let canceledByUser = false
+
+  function buildVariant(style: VariantStyle): AiResult<VariantFile> {
+    const variant = last?.result.variants.find((candidate) => candidate.style === style)
+    if (!last || !variant) return fail('no-source')
+    const { bytes, document } = last.source
+    return ok({
+      fileName: variantFileName(document.source.fileName, style),
+      format: document.source.format,
+      bytes: writeCvDocument(bytes, document, variant.rewrites),
+    })
+  }
+
+  async function saveVariant(
+    style: VariantStyle,
+    choosePath: ChooseVariantPath,
+  ): Promise<AiResult<FileSaveOutcome>> {
+    const built = buildVariant(style)
+    if (!built.ok) return built
+    const filePath = await choosePath(built.value.fileName, built.value.format)
+    if (!filePath) return ok({ canceled: true })
+    try {
+      await writeFile(filePath, built.value.bytes)
+      return ok({ canceled: false, filePath })
+    } catch {
+      return fail('save-failed')
+    }
+  }
+
+  async function attachVariant(
+    style: VariantStyle,
+    applicationId: string,
+  ): Promise<AiResult<ApplicationDocument>> {
+    const built = buildVariant(style)
+    if (!built.ok) return built
+    try {
+      const { fileName, bytes } = built.value
+      return ok(await deps.documents.importBuffer(applicationId, fileName, bytes))
+    } catch {
+      return fail('save-failed')
+    }
+  }
 
   async function loadSource(filePath: string): Promise<AiResult<CvSource>> {
     const fileName = basename(filePath)
@@ -157,9 +239,11 @@ export function createCvService(deps: CvServiceDeps): CvService {
     const abort = new AbortController()
     controller = abort
     canceledByUser = false
+    const source = current
     try {
-      const result = await run(key, current, request, abort)
+      const result = await run(key, source, request, abort)
       if (canceledByUser) return fail('canceled')
+      if (result.ok) last = { result: result.value, source }
       return result
     } catch {
       return fail(canceledByUser ? 'canceled' : 'server')
@@ -174,5 +258,12 @@ export function createCvService(deps: CvServiceDeps): CvService {
     controller.abort()
   }
 
-  return { loadSource, optimize, cancel, isRunning: () => controller !== null }
+  return {
+    loadSource,
+    optimize,
+    cancel,
+    isRunning: () => controller !== null,
+    saveVariant,
+    attachVariant,
+  }
 }

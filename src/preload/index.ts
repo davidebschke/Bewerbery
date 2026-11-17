@@ -25,6 +25,9 @@ export const api: BewerberyApi = {
   readCvFile: (filePath) => ipcRenderer.invoke(IPC.readCvFile, filePath),
   optimizeCv: (request) => ipcRenderer.invoke(IPC.optimizeCv, request),
   cancelCvOptimization: () => ipcRenderer.invoke(IPC.cancelCvOptimization),
+  saveCvVariant: (style) => ipcRenderer.invoke(IPC.saveCvVariant, style),
+  attachCvVariant: (style, applicationId) =>
+    ipcRenderer.invoke(IPC.attachCvVariant, style, applicationId),
 }
 
 contextBridge.exposeInMainWorld('api', api)

@@ -1,13 +1,17 @@
 import { z } from 'zod'
 import { IPC } from '@shared/ipc'
 import { fail } from '@shared/domain/cv/aiErrors'
-import { apiKeySchema, cvOptimizationRequestSchema } from '@shared/domain/cv/schemas'
+import {
+  apiKeySchema,
+  cvOptimizationRequestSchema,
+  variantStyleSchema,
+} from '@shared/domain/cv/schemas'
 import { TEMPLATE_FORMATS } from '@shared/domain/import/template'
 import { applicationDocumentSchema } from '@shared/schemas'
 import type { AppData } from '@shared/types'
 import type { AiClient } from '../ai/claudeClient'
 import type { SecretStore } from '../ai/secretStore'
-import type { CvService } from '../cv/cvService'
+import type { ChooseVariantPath, CvService } from '../cv/cvService'
 import type { DocumentService } from '../documents/documentService'
 import type { ImportService } from '../import/importService'
 import type { PdfExportService } from '../pdf/pdfExportService'
@@ -27,6 +31,8 @@ export interface IpcDeps {
   cv: CvService
   /** Dateidialog für den Lebenslauf (DOCX/ODT); `null` = abgebrochen */
   pickCvFile(): Promise<string | null>
+  /** Speichern-Dialog für eine CV-Variante; `null` = abgebrochen */
+  saveCvFile: ChooseVariantPath
   /** Öffnet einen Dateiauswahldialog und liefert die gewählten Pfade */
   pickFiles(): Promise<string[]>
   /** Öffnet eine Datei mit dem Standardprogramm, liefert Fehlermeldung oder '' */
@@ -128,4 +134,12 @@ export function registerIpc(deps: IpcDeps): void {
   )
 
   ipcMain.handle(IPC.cancelCvOptimization, () => deps.cv.cancel())
+
+  ipcMain.handle(IPC.saveCvVariant, (_event, style) =>
+    deps.cv.saveVariant(variantStyleSchema.parse(style), deps.saveCvFile),
+  )
+
+  ipcMain.handle(IPC.attachCvVariant, (_event, style, applicationId) =>
+    deps.cv.attachVariant(variantStyleSchema.parse(style), idSchema.parse(applicationId)),
+  )
 }

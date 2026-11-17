@@ -76,12 +76,16 @@ describe('preload api', () => {
     await api.readCvFile('C:/cv.docx')
     await api.optimizeCv(request)
     await api.cancelCvOptimization()
+    await api.saveCvVariant('ats')
+    await api.attachCvVariant('factual', 'a')
 
     expect(invoke.mock.calls).toEqual([
       [IPC.pickCvFile],
       [IPC.readCvFile, 'C:/cv.docx'],
       [IPC.optimizeCv, request],
       [IPC.cancelCvOptimization],
+      [IPC.saveCvVariant, 'ats'],
+      [IPC.attachCvVariant, 'factual', 'a'],
     ])
   })
 })

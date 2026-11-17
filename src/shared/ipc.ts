@@ -5,6 +5,7 @@ import type {
   CvOptimizationResult,
   CvSource,
 } from './domain/cv/schemas'
+import type { VariantStyle } from './domain/cv/styles'
 import type { TemplateFormat } from './domain/import/template'
 import type { AppData, ApplicationDocument, ImportWorkbook } from './types'
 
@@ -27,6 +28,8 @@ export const IPC = {
   readCvFile: 'cv:read-file',
   optimizeCv: 'cv:optimize',
   cancelCvOptimization: 'cv:cancel',
+  saveCvVariant: 'cv:save-variant',
+  attachCvVariant: 'cv:attach-variant',
 } as const
 
 export interface PdfExportOutcome {
@@ -65,4 +68,11 @@ export interface BewerberyApi {
   readCvFile(filePath: string): Promise<AiResult<CvSource>>
   optimizeCv(request: CvOptimizationRequest): Promise<AiResult<CvOptimizationResult>>
   cancelCvOptimization(): Promise<void>
+  /** Variante im Originaldesign über einen Speichern-Dialog ablegen */
+  saveCvVariant(style: VariantStyle): Promise<AiResult<FileSaveOutcome>>
+  /** Variante im Originaldesign als Dokument an eine Bewerbung hängen */
+  attachCvVariant(
+    style: VariantStyle,
+    applicationId: string,
+  ): Promise<AiResult<ApplicationDocument>>
 }

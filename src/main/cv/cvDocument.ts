@@ -10,6 +10,12 @@ import { tokenizeXml } from '@shared/xml/tokens'
 
 export const CV_EXTENSIONS = ['docx', 'odt'] as const
 
+/** Filterbeschriftungen für Speichern-Dialoge */
+export const CV_FORMAT_LABELS: Record<CvFormat, string> = {
+  docx: 'Word-Dokument (DOCX)',
+  odt: 'LibreOffice-Dokument (ODT)',
+}
+
 const DEFAULT_DOCX_MAIN = 'word/document.xml'
 const ODT_MAIN = 'content.xml'
 const OFFICE_DOCUMENT_REL = /\/officeDocument$/

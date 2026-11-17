@@ -62,6 +62,11 @@ function setup(overrides: Partial<IpcDeps> = {}) {
     optimize: vi.fn(async () => ({ ok: true as const, value: makeCvResult() })),
     cancel: vi.fn(),
     isRunning: vi.fn(() => false),
+    saveVariant: vi.fn(async () => ({
+      ok: true as const,
+      value: { canceled: false, filePath: 'C:/cv.docx' },
+    })),
+    attachVariant: vi.fn(async () => ({ ok: true as const, value: doc })),
   }
   const deps: IpcDeps = {
     ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
@@ -73,6 +78,7 @@ function setup(overrides: Partial<IpcDeps> = {}) {
     ai,
     cv,
     pickCvFile: vi.fn(async () => 'C:/Lebenslauf.docx'),
+    saveCvFile: vi.fn(async () => 'C:/cv.docx'),
     pickFiles: vi.fn(async () => ['C:/cv.pdf']),
     openPath: vi.fn(async () => ''),
     now: () => new Date('2026-09-23T00:00:00.000Z'),
@@ -259,6 +265,23 @@ describe('registerIpc', () => {
 
       invoke(IPC.cancelCvOptimization)
       expect(cv.cancel).toHaveBeenCalled()
+    })
+
+    it('saves and attaches validated variants', async () => {
+      const { invoke, cv, deps } = setup()
+      expect(await invoke(IPC.saveCvVariant, 'ats')).toEqual({
+        ok: true,
+        value: { canceled: false, filePath: 'C:/cv.docx' },
+      })
+      expect(cv.saveVariant).toHaveBeenCalledWith('ats', deps.saveCvFile)
+      expect(await invoke(IPC.attachCvVariant, 'factual', 'app-1')).toEqual({
+        ok: true,
+        value: doc,
+      })
+      expect(cv.attachVariant).toHaveBeenCalledWith('factual', 'app-1')
+
+      expect(() => invoke(IPC.saveCvVariant, 'fancy')).toThrow()
+      expect(() => invoke(IPC.attachCvVariant, 'ats', '')).toThrow()
     })
   })
 })
