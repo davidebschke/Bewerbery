@@ -19,6 +19,21 @@ beforeEach(() => {
 })
 
 describe('appStore', () => {
+  it('stores the job description of an existing application', () => {
+    const app = makeApplication({ id: 'a1' })
+    useAppStore.setState({ data: makeData({ applications: [app] }), status: 'ready' })
+
+    store().setJobDescription('a1', 'React, TypeScript')
+    expect(store().data.applications[0].jobDescription).toBe('React, TypeScript')
+    expect(api.saveData).toHaveBeenCalledTimes(1)
+
+    store().setJobDescription('a1', 'x'.repeat(15_010))
+    expect(store().data.applications[0].jobDescription).toHaveLength(15_000)
+
+    store().setJobDescription('fehlt', 'egal')
+    expect(api.saveData).toHaveBeenCalledTimes(2)
+  })
+
   it('hydrates from the api', async () => {
     const data = makeData({ applications: [makeApplication({ company: 'Loaded' })] })
     api.loadData.mockResolvedValueOnce(data)
