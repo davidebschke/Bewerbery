@@ -25,6 +25,8 @@ export const api: BewerberyApi = {
   readCvFile: (filePath) => ipcRenderer.invoke(IPC.readCvFile, filePath),
   optimizeCv: (request) => ipcRenderer.invoke(IPC.optimizeCv, request),
   cancelCvOptimization: () => ipcRenderer.invoke(IPC.cancelCvOptimization),
+  getLastCvResult: () => ipcRenderer.invoke(IPC.getLastCvResult),
+  clearLastCvResult: () => ipcRenderer.invoke(IPC.clearLastCvResult),
   saveCvVariant: (style) => ipcRenderer.invoke(IPC.saveCvVariant, style),
   attachCvVariant: (style, applicationId) =>
     ipcRenderer.invoke(IPC.attachCvVariant, style, applicationId),

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fail, ok, type AiResult } from '@shared/domain/cv/aiErrors'
 import type { AssessmentOutput, GenerationOutput } from '@shared/domain/cv/schemas'
 import type { VariantStyle } from '@shared/domain/cv/styles'
+import { makeCvResult } from '@shared/testing/cvFixtures'
 import type { AiClient } from '../../../../src/main/ai/claudeClient'
 import { readCvDocument } from '../../../../src/main/cv/cvDocument'
 import {
@@ -12,6 +13,7 @@ import {
   variantFileName,
   type CvServiceDeps,
 } from '../../../../src/main/cv/cvService'
+import { createLastResultStore } from '../../../../src/main/cv/lastResultStore'
 import { buildDocx, buildOdt, PDF_BYTES } from '../../../fixtures/cv/buildFixtures'
 
 const KEY = 'sk-ant-api03-test'
@@ -63,8 +65,8 @@ afterEach(async () => {
 
 function setup(overrides: Partial<CvServiceDeps> = {}, ai: Partial<AiClient> = {}) {
   const deps: CvServiceDeps = {
-    dir,
     secrets: { get: vi.fn(async () => KEY) },
+    lastResults: createLastResultStore(join(dir, 'cv')),
     ai: {
       generateVariant: vi.fn(async (_key, style: VariantStyle) => ok(generation(style))),
       assessAll: vi.fn(async () => ok(ASSESSMENT)),
@@ -168,18 +170,80 @@ describe('cvService variants', () => {
   })
 })
 
+describe('cvService last result', () => {
+  it('persists a successful run and restores it in a new session', async () => {
+    const first = setup()
+    await first.service.loadSource(docxPath)
+    const result = await first.service.optimize(REQUEST)
+    if (!result.ok) throw new Error(result.error)
+    expect((await readdir(join(dir, 'cv'))).sort()).toEqual([
+      'last-result.json',
+      'last-source.docx',
+    ])
+    expect(await first.service.getLastResult()).toEqual(result.value)
+
+    // Neustart: neuer Service, gleiche Dateien
+    const second = setup()
+    expect(await second.service.getLastResult()).toEqual(result.value)
+    const choose = vi.fn(async () => join(dir, 'nach-neustart.docx'))
+    expect((await second.service.saveVariant('ats', choose)).ok).toBe(true)
+    const written = readCvDocument(
+      new Uint8Array(await readFile(join(dir, 'nach-neustart.docx'))),
+      'x.docx',
+    )
+    expect(written.ok && written.value.source.paragraphs[2].segments[1]).toBe(
+      'Frontend-Entwickler (React)',
+    )
+  })
+
+  it('returns null without a stored run and discards on request', async () => {
+    const { service } = setup()
+    expect(await service.getLastResult()).toBeNull()
+
+    await service.loadSource(docxPath)
+    await service.optimize(REQUEST)
+    await service.clearLastResult()
+    expect(await service.getLastResult()).toBeNull()
+    expect(await readdir(join(dir, 'cv'))).toEqual([])
+    expect(await setup().service.getLastResult()).toBeNull()
+  })
+
+  it('drops a stored run whose source can no longer be read', async () => {
+    const lastResults = createLastResultStore(join(dir, 'cv'))
+    await lastResults.save({ result: makeCvResult(), sourceBytes: PDF_BYTES })
+    const { service } = setup({ lastResults })
+    expect(await service.getLastResult()).toBeNull()
+    expect(await readdir(join(dir, 'cv'))).toEqual([])
+  })
+
+  it('keeps the result even if persisting fails', async () => {
+    const lastResults = {
+      save: vi.fn(async () => {
+        throw new Error('disk full')
+      }),
+      load: vi.fn(async () => null),
+      clear: vi.fn(async () => undefined),
+    }
+    const { service } = setup({ lastResults })
+    await service.loadSource(docxPath)
+    const result = await service.optimize(REQUEST)
+    expect(result.ok).toBe(true)
+    expect((await service.getLastResult())?.id).toBe('result-1')
+  })
+})
+
 describe('cvService.loadSource', () => {
-  it('reads the cv and keeps a copy as current source', async () => {
+  it('reads docx and odt files without writing anything yet', async () => {
     const { service } = setup()
     const result = await service.loadSource(docxPath)
     if (!result.ok) throw new Error(result.error)
     expect(result.value.fileName).toBe('Lebenslauf.docx')
-    expect(await readdir(join(dir, 'cv'))).toEqual(['source.docx'])
 
     const odtPath = join(dir, 'CV.odt')
     await writeFile(odtPath, buildOdt())
-    expect((await service.loadSource(odtPath)).ok).toBe(true)
-    expect(await readdir(join(dir, 'cv'))).toEqual(['source.odt'])
+    const odt = await service.loadSource(odtPath)
+    expect(odt.ok && odt.value.format).toBe('odt')
+    expect(await readdir(dir)).not.toContain('cv')
   })
 
   it('rejects pdfs, oversized and unreadable files', async () => {

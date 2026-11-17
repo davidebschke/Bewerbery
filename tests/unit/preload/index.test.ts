@@ -76,6 +76,8 @@ describe('preload api', () => {
     await api.readCvFile('C:/cv.docx')
     await api.optimizeCv(request)
     await api.cancelCvOptimization()
+    await api.getLastCvResult()
+    await api.clearLastCvResult()
     await api.saveCvVariant('ats')
     await api.attachCvVariant('factual', 'a')
 
@@ -84,6 +86,8 @@ describe('preload api', () => {
       [IPC.readCvFile, 'C:/cv.docx'],
       [IPC.optimizeCv, request],
       [IPC.cancelCvOptimization],
+      [IPC.getLastCvResult],
+      [IPC.clearLastCvResult],
       [IPC.saveCvVariant, 'ats'],
       [IPC.attachCvVariant, 'factual', 'a'],
     ])

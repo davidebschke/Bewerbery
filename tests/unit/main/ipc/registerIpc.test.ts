@@ -67,6 +67,8 @@ function setup(overrides: Partial<IpcDeps> = {}) {
       value: { canceled: false, filePath: 'C:/cv.docx' },
     })),
     attachVariant: vi.fn(async () => ({ ok: true as const, value: doc })),
+    getLastResult: vi.fn(async () => makeCvResult()),
+    clearLastResult: vi.fn(async () => undefined),
   }
   const deps: IpcDeps = {
     ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
@@ -265,6 +267,13 @@ describe('registerIpc', () => {
 
       invoke(IPC.cancelCvOptimization)
       expect(cv.cancel).toHaveBeenCalled()
+    })
+
+    it('returns and clears the last result', async () => {
+      const { invoke, cv } = setup()
+      expect(await invoke(IPC.getLastCvResult)).toEqual(makeCvResult())
+      await invoke(IPC.clearLastCvResult)
+      expect(cv.clearLastResult).toHaveBeenCalled()
     })
 
     it('saves and attaches validated variants', async () => {

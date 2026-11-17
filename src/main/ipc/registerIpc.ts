@@ -135,6 +135,10 @@ export function registerIpc(deps: IpcDeps): void {
 
   ipcMain.handle(IPC.cancelCvOptimization, () => deps.cv.cancel())
 
+  ipcMain.handle(IPC.getLastCvResult, () => deps.cv.getLastResult())
+
+  ipcMain.handle(IPC.clearLastCvResult, () => deps.cv.clearLastResult())
+
   ipcMain.handle(IPC.saveCvVariant, (_event, style) =>
     deps.cv.saveVariant(variantStyleSchema.parse(style), deps.saveCvFile),
   )

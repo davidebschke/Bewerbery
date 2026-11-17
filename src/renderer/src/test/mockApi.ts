@@ -45,6 +45,8 @@ export function installMockApi(data: AppData = createEmptyData()): MockApi {
     readCvFile: vi.fn(async () => ({ ok: true, value: makeCvSource() })),
     optimizeCv: vi.fn(async () => ({ ok: true, value: makeCvResult() })),
     cancelCvOptimization: vi.fn(async () => undefined),
+    getLastCvResult: vi.fn(async () => null),
+    clearLastCvResult: vi.fn(async () => undefined),
     saveCvVariant: vi.fn(async () => ({
       ok: true,
       value: { canceled: false, filePath: 'C:/Lebenslauf – ATS-optimiert.docx' },

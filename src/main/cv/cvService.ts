@@ -1,5 +1,5 @@
 import { readFile, stat, writeFile } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import { basename } from 'node:path'
 import { MAX_CV_FILE_BYTES, MAX_VARIANT_CHANGES } from '@shared/constants'
 import { fail, ok, type AiResult } from '@shared/domain/cv/aiErrors'
 import { normalizeAssessment } from '@shared/domain/cv/assessment'
@@ -19,23 +19,22 @@ import type { ApplicationDocument } from '@shared/types'
 import type { AiClient } from '../ai/claudeClient'
 import type { SecretStore } from '../ai/secretStore'
 import type { DocumentService } from '../documents/documentService'
-import { removeFileIfExists, writeFileAtomic } from '../storage/atomicWrite'
 import {
   checkCvFileName,
   readCvDocument,
   writeCvDocument,
   type LoadedCvDocument,
 } from './cvDocument'
+import type { LastResultStore } from './lastResultStore'
 
 export const CV_DIR_NAME = 'cv'
 const DEFAULT_CHANGE = 'Formulierungen an die Stellenanzeige angepasst'
 
 export interface CvServiceDeps {
-  /** Benutzerdatenverzeichnis; Quelle und Ergebnis liegen unter `cv/` */
-  dir: string
   secrets: Pick<SecretStore, 'get'>
   ai: Pick<AiClient, 'generateVariant' | 'assessAll'>
   documents: Pick<DocumentService, 'importBuffer'>
+  lastResults: LastResultStore
   now(): Date
   newId(): string
 }
@@ -57,6 +56,9 @@ export interface CvService {
   ): Promise<AiResult<FileSaveOutcome>>
   /** Legt eine Variante des letzten Ergebnisses als Dokument an einer Bewerbung ab */
   attachVariant(style: VariantStyle, applicationId: string): Promise<AiResult<ApplicationDocument>>
+  /** Letztes Ergebnis – auch nach einem Neustart */
+  getLastResult(): Promise<CvOptimizationResult | null>
+  clearLastResult(): Promise<void>
 }
 
 interface CurrentSource {
@@ -90,16 +92,42 @@ function cleanChanges(changes: string[]): string[] {
 }
 
 export function createCvService(deps: CvServiceDeps): CvService {
-  const cvDir = join(deps.dir, CV_DIR_NAME)
   let current: CurrentSource | null = null
   let last: LastRun | null = null
   let controller: AbortController | null = null
   let canceledByUser = false
 
-  function buildVariant(style: VariantStyle): AiResult<VariantFile> {
-    const variant = last?.result.variants.find((candidate) => candidate.style === style)
-    if (!last || !variant) return fail('no-source')
-    const { bytes, document } = last.source
+  /** Stellt das gespeicherte Ergebnis nach einem Neustart wieder her */
+  async function restoreLast(): Promise<LastRun | null> {
+    if (last) return last
+    const stored = await deps.lastResults.load()
+    if (!stored) return null
+    const document = readCvDocument(stored.sourceBytes, stored.result.source.fileName)
+    if (!document.ok) {
+      await deps.lastResults.clear()
+      return null
+    }
+    last = {
+      result: stored.result,
+      source: { bytes: stored.sourceBytes, document: document.value },
+    }
+    return last
+  }
+
+  async function getLastResult(): Promise<CvOptimizationResult | null> {
+    return (await restoreLast())?.result ?? null
+  }
+
+  async function clearLastResult(): Promise<void> {
+    last = null
+    await deps.lastResults.clear()
+  }
+
+  async function buildVariant(style: VariantStyle): Promise<AiResult<VariantFile>> {
+    const run = await restoreLast()
+    const variant = run?.result.variants.find((candidate) => candidate.style === style)
+    if (!run || !variant) return fail('no-source')
+    const { bytes, document } = run.source
     return ok({
       fileName: variantFileName(document.source.fileName, style),
       format: document.source.format,
@@ -111,7 +139,7 @@ export function createCvService(deps: CvServiceDeps): CvService {
     style: VariantStyle,
     choosePath: ChooseVariantPath,
   ): Promise<AiResult<FileSaveOutcome>> {
-    const built = buildVariant(style)
+    const built = await buildVariant(style)
     if (!built.ok) return built
     const filePath = await choosePath(built.value.fileName, built.value.format)
     if (!filePath) return ok({ canceled: true })
@@ -127,7 +155,7 @@ export function createCvService(deps: CvServiceDeps): CvService {
     style: VariantStyle,
     applicationId: string,
   ): Promise<AiResult<ApplicationDocument>> {
-    const built = buildVariant(style)
+    const built = await buildVariant(style)
     if (!built.ok) return built
     try {
       const { fileName, bytes } = built.value
@@ -145,10 +173,6 @@ export function createCvService(deps: CvServiceDeps): CvService {
       const bytes = new Uint8Array(await readFile(filePath))
       const result = readCvDocument(bytes, fileName)
       if (!result.ok) return result
-
-      const extension = result.value.source.format
-      await writeFileAtomic(join(cvDir, `source.${extension}`), bytes)
-      await removeFileIfExists(join(cvDir, `source.${extension === 'docx' ? 'odt' : 'docx'}`))
       current = { bytes, document: result.value }
       return ok(result.value.source)
     } catch {
@@ -243,7 +267,13 @@ export function createCvService(deps: CvServiceDeps): CvService {
     try {
       const result = await run(key, source, request, abort)
       if (canceledByUser) return fail('canceled')
-      if (result.ok) last = { result: result.value, source }
+      if (result.ok) {
+        last = { result: result.value, source }
+        // Speichern ist Komfort (US4) – ein Fehler darf das Ergebnis nicht verwerfen
+        await deps.lastResults
+          .save({ result: result.value, sourceBytes: source.bytes })
+          .catch(() => undefined)
+      }
       return result
     } catch {
       return fail(canceledByUser ? 'canceled' : 'server')
@@ -265,5 +295,7 @@ export function createCvService(deps: CvServiceDeps): CvService {
     isRunning: () => controller !== null,
     saveVariant,
     attachVariant,
+    getLastResult,
+    clearLastResult,
   }
 }

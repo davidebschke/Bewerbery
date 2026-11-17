@@ -8,7 +8,8 @@ import { createAiClient } from './ai/claudeClient'
 import { createFakeAiClient, fakeCrypto, isAiFakeMode } from './ai/fakeAi'
 import { createSecretStore, type SecretCrypto } from './ai/secretStore'
 import { CV_EXTENSIONS, CV_FORMAT_LABELS } from './cv/cvDocument'
-import { createCvService } from './cv/cvService'
+import { createCvService, CV_DIR_NAME } from './cv/cvService'
+import { createLastResultStore } from './cv/lastResultStore'
 import { createDocumentService } from './documents/documentService'
 import { createImportService, IMPORT_EXTENSIONS } from './import/importService'
 import { registerIpc } from './ipc/registerIpc'
@@ -102,7 +103,7 @@ app.whenReady().then(() => {
     secrets,
     ai,
     cv: createCvService({
-      dir: userData,
+      lastResults: createLastResultStore(join(userData, CV_DIR_NAME)),
       secrets,
       ai,
       documents,

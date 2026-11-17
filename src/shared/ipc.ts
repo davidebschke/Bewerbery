@@ -28,6 +28,8 @@ export const IPC = {
   readCvFile: 'cv:read-file',
   optimizeCv: 'cv:optimize',
   cancelCvOptimization: 'cv:cancel',
+  getLastCvResult: 'cv:last-result',
+  clearLastCvResult: 'cv:clear-last-result',
   saveCvVariant: 'cv:save-variant',
   attachCvVariant: 'cv:attach-variant',
 } as const
@@ -68,6 +70,9 @@ export interface BewerberyApi {
   readCvFile(filePath: string): Promise<AiResult<CvSource>>
   optimizeCv(request: CvOptimizationRequest): Promise<AiResult<CvOptimizationResult>>
   cancelCvOptimization(): Promise<void>
+  /** Letztes Ergebnis (auch nach einem Neustart); `null` = keins */
+  getLastCvResult(): Promise<CvOptimizationResult | null>
+  clearLastCvResult(): Promise<void>
   /** Variante im Originaldesign über einen Speichern-Dialog ablegen */
   saveCvVariant(style: VariantStyle): Promise<AiResult<FileSaveOutcome>>
   /** Variante im Originaldesign als Dokument an eine Bewerbung hängen */
